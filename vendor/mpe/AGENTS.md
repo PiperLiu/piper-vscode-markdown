@@ -14,6 +14,8 @@ Use pnpm with the retained lockfile here; the root uses npm. Do not replace the 
 - `src/preview-provider.ts` owns previews and source synchronization. `src/notebooks-manager.ts` applies notebook configuration.
 - `src/piper-api.ts` exposes source resolution, preview, and awaitable HTML/PDF exports to the root wrapper. `src/piper-exports.ts` uses an independent engine and unsaved-document snapshot. Preserve requested encodings for other filesystem reads, source-alias protection, and direct destination writes.
 - Public commands/settings use `piperMarkdown.enhanced.*`; preview URI/view types use `piper-markdown-enhanced`; private routes use `_piperEnhanced.*`. Explicit old MPE settings remain fallback values. Do not register conflicting upstream command IDs.
+- `src/publishing-bridge.ts` binds publishing services to a preview panel and document revision; keep abort/generation checks and pending refreshes when a copy is cancelled. Never trust a source URI or article HTML supplied by the webview. `src/publishing-parser.ts` parses a bounded, read-only snapshot for the publishing renderer.
+- `frontend/` retains the pinned Crossnote preview source and provenance. `build-frontend.cjs` rebuilds that preview UI while the npm Crossnote engine stays pinned. Reading remains mounted when the sandboxed publication iframe is visible. `out/native/publishing-runtime.cjs` supplies the bundled browser dependency; raw node_modules are not shipped.
 - `build.js` creates native/web bundles and the standalone server. `gulpfile.js` copies required crossnote styles, dependencies, webview, and server-app assets. The root build decides what enters the VSIX.
 
 ## Execution and settings boundaries

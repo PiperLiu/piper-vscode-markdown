@@ -1,115 +1,148 @@
 'use strict';
-const vscode=require('vscode');
-const path=require('node:path');
-const crypto=require('node:crypto');
-const {render,safeURL}=require('./render');
-const {upload,needsCredential,credentialScope}=require('./upload');
-const {prepareWechatMarkdown}=require('./wechat-markdown');
-const {writeClipboard}=require('./clipboard');
-const {readConfig}=require('./config');
-const {assertSeparateDestination}=require('./export-path');
-const {previewHTML,exportHTML}=require('./preview');
-const {inspectWechatCompatibility,compatibilityMessage,assertWechatCompatible}=require('./wechat-preflight');
-function activate(context,integrations={}){
- const previews=new Map();let copying=false;
- const cfg=uri=>readConfig(vscode.workspace,uri);
- const key=c=>'upload:'+crypto.createHash('sha256').update(credentialScope(c)).digest('hex');
- const report=e=>vscode.window.showErrorMessage(e.name==='AbortError'?'已取消，剪贴板未修改；已上传图片的保留与清理由图床设置决定。':e.message);
- const guarded=fn=>async(...args)=>{try{return await fn(...args);}catch(e){report(e);}};
- function check(doc){if(!vscode.workspace.isTrusted)throw new Error('请先信任此工作区');if(!doc||doc.languageId!=='markdown'||doc.uri.scheme!=='file')throw new Error('请先打开本地 Markdown 文件');return doc;}
- async function active(){
-  const ownPreview=[...previews.values()].find(state=>state.panel.active);
-  return check(ownPreview?.doc||await integrations.resolveDocument?.()||vscode.window.activeTextEditor?.document);
- }
- const root=doc=>vscode.workspace.getWorkspaceFolder(doc.uri)?.uri.fsPath||path.dirname(doc.uri.fsPath);
- const options=doc=>({filename:doc.uri.fsPath,root:root(doc),fontSize:cfg(doc.uri).fontSize});
- async function copy(doc,selection){
-  doc=doc||await active();check(doc);if(copying)throw new Error('正在准备另一份内容，请完成或取消后重试');
-  if(process.platform!=='darwin'||process.arch!=='arm64')throw new Error('此安装包的富文本复制支持 macOS Apple Silicon');
-  copying=true;for(const p of previews.values())p.panel.webview.postMessage({type:'busy',value:true});
-  try{
-   const c=cfg(doc.uri),prepared=prepareWechatMarkdown(selection&&!selection.isEmpty?doc.getText(selection):doc.getText(),c.wechatSkipLeadingH1),markdown=prepared.markdown;
-   if(prepared.omittedTitle&&!markdown.trim())throw new Error('忽略标题后没有可复制的正文；剪贴板未修改。');
-   assertWechatCompatible(markdown);
-   const token=c.uploadUrl&&needsCredential(c)?await context.secrets.get(key(c)):undefined;
-   const result=await vscode.window.withProgress({location:vscode.ProgressLocation.Notification,title:'准备公众号内容',cancellable:true},async(progress,cancellation)=>{
-    const controller=new AbortController(),sub=cancellation.onCancellationRequested(()=>controller.abort());if(cancellation.isCancellationRequested)controller.abort();let count=0;
-    try{const output=await render(markdown,{...options(doc),signal:controller.signal,resolveAsset:async asset=>{
-     if(!c.uploadUrl)throw new Error('内容包含本地图片或公式，请先设置 piperMarkdown.uploadUrl 和图床 Token');
-     progress.report({message:`上传图片 / 公式 ${++count}`});return upload(asset,c,token,controller.signal);
-    }});controller.signal.throwIfAborted();return output;}finally{sub.dispose();}
-   });
-   await writeClipboard(context.asAbsolutePath('bin/clipboard'),result);
-   const retention=(!c.imageHostProvider||c.imageHostProvider==='piper')?`请在 ${c.ttl} 内粘贴、保存并重新打开微信草稿检查图片。`:'请保存并重新打开微信草稿检查图片；存储期限由图床设置决定。';
-   vscode.window.showInformationMessage(`已复制${selection&&!selection.isEmpty?'选区':'全文'}。${prepared.omittedTitle?'已忽略开头的一级标题。':''}${result.uniqueAssets} 张图片/公式已上传；${retention}`);
-  }finally{copying=false;for(const p of previews.values())p.panel.webview.postMessage({type:'busy',value:false});}
- }
- async function enhanced(doc){
-  check(doc);
-  if(!integrations.openEnhanced)throw new Error('增强预览尚未初始化，请重新载入窗口');
-  return integrations.openEnhanced(doc);
- }
- async function exportDocument(doc){
-  doc=doc||await active();check(doc);
-  const prepared=prepareWechatMarkdown(doc.getText(),cfg(doc.uri).wechatSkipLeadingH1),markdown=prepared.markdown;if(prepared.omittedTitle&&!markdown.trim())throw new Error('忽略标题后没有可导出的正文。');assertWechatCompatible(markdown);
-  const result=await render(markdown,options(doc));
-  const uri=await vscode.window.showSaveDialog({defaultUri:vscode.Uri.file(doc.uri.fsPath.replace(/\.[^.]+$/, '')+'.wechat.html'),filters:{HTML:['html']},saveLabel:'导出公众号 HTML'});
-  if(uri){if(uri.scheme!=='file')throw new Error('Choose a local export destination.');await assertSeparateDestination(doc.uri.fsPath,uri.fsPath);await vscode.workspace.fs.writeFile(uri,Buffer.from(exportHTML(result,path.basename(doc.uri.fsPath))));}
- }
- async function reveal(doc,line,focus){
-  if(!Number.isSafeInteger(line)||line<0||line>=doc.lineCount)return;
-  const editor=vscode.window.visibleTextEditors.find(e=>e.document===doc)||(focus?await vscode.window.showTextDocument(doc,{viewColumn:vscode.ViewColumn.One,preserveFocus:!focus}):null);
-  if(!editor)return;const position=new vscode.Position(line,0);editor.revealRange(new vscode.Range(position,position),vscode.TextEditorRevealType.AtTop);
-  if(focus){editor.selection=new vscode.Selection(position,position);await vscode.window.showTextDocument(doc,{viewColumn:editor.viewColumn,preserveFocus:false});}
- }
- async function preview(doc){
-  doc=doc||await active();check(doc);const id=doc.uri.toString();if(previews.has(id)){const existing=previews.get(id);existing.doc=doc;existing.schedule();existing.panel.reveal(vscode.ViewColumn.Beside);return;}
-  const panel=vscode.window.createWebviewPanel('piperMarkdown.wechatReview',`公众号 · ${path.basename(doc.uri.fsPath)}`,vscode.ViewColumn.Beside,{enableScripts:true,localResourceRoots:[vscode.Uri.joinPath(context.extensionUri,'media')],retainContextWhenHidden:true});
-  const state={panel,doc,timer:undefined,controller:undefined,generation:0,ignoreScrollUntil:0,disposed:false};previews.set(id,state);
-  async function refresh(){
-   const doc=state.doc;
-   const generation=++state.generation;state.controller?.abort();state.controller=new AbortController();
-   try{const c=cfg(doc.uri),prepared=prepareWechatMarkdown(doc.getText(),c.wechatSkipLeadingH1),result=await render(prepared.markdown,{...options(doc),preview:true,signal:state.controller.signal});if(state.disposed||generation!==state.generation||state.controller.signal.aborted)return;
-    await panel.webview.postMessage({type:'content',html:result.html,headings:result.headings,characters:result.characters,filename:path.basename(doc.uri.fsPath),width:c.previewWidth,scrollSync:c.scrollSync,skipLeadingH1:c.wechatSkipLeadingH1,omittedTitle:prepared.omittedTitle,compatibility:compatibilityMessage(inspectWechatCompatibility(prepared.markdown))});
-   }catch(e){if(!state.disposed&&generation===state.generation&&e.name!=='AbortError')panel.webview.postMessage({type:'error',message:e.message});}
-  }
-  state.schedule=()=>{clearTimeout(state.timer);state.controller?.abort();state.timer=setTimeout(refresh,220);};
-  panel.webview.onDidReceiveMessage(guarded(async m=>{
-   if(!m||typeof m.type!=='string')return;
-   const doc=state.doc;
-   switch(m.type){
-    case 'ready':return refresh();
-    case 'copy':return copy(doc);
-    case 'skipTitle':{if(typeof m.value!=='boolean')return;const configuration=vscode.workspace.getConfiguration('piperMarkdown',doc.uri),current=configuration.inspect('wechatSkipLeadingH1');const target=current?.workspaceFolderValue!==undefined?vscode.ConfigurationTarget.WorkspaceFolder:current?.workspaceValue!==undefined?vscode.ConfigurationTarget.Workspace:vscode.ConfigurationTarget.Global;try{await configuration.update('wechatSkipLeadingH1',m.value,target);}finally{state.schedule();}return;}
-    case 'source':return vscode.window.showTextDocument(doc,{viewColumn:vscode.ViewColumn.One});
-    case 'export':return exportDocument(doc);
-    case 'mpe':return enhanced(doc);
-    case 'settings':return vscode.commands.executeCommand('workbench.action.openSettings','@ext:piperliu.piper-markdown-review');
-    case 'reveal':state.ignoreScrollUntil=Date.now()+600;return reveal(doc,m.line,true);
-    case 'scroll':if(cfg(doc.uri).scrollSync){state.ignoreScrollUntil=Date.now()+600;return reveal(doc,m.line,false);}break;
-    case 'link':if(typeof m.href==='string'&&/^https?:\/\//i.test(m.href)){const u=safeURL(m.href);await vscode.env.openExternal(vscode.Uri.parse(u.href));}break;
-   }
-  }),null,context.subscriptions);
-  panel.onDidDispose(()=>{state.disposed=true;clearTimeout(state.timer);state.controller?.abort();previews.delete(id);},null,context.subscriptions);
-  panel.webview.html=previewHTML(panel.webview,context);context.subscriptions.push(panel);
- }
- context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(e=>{const s=previews.get(e.document.uri.toString());if(s){s.doc=e.document;s.schedule();}}));
- context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(doc=>{const s=previews.get(doc.uri.toString());if(s){s.doc=doc;s.schedule();}}));
- context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e=>{if(e.affectsConfiguration('piperMarkdown')||e.affectsConfiguration('piperWechat'))for(const s of previews.values())s.schedule();}));
- context.subscriptions.push(vscode.window.onDidChangeTextEditorVisibleRanges(e=>{const s=previews.get(e.textEditor.document.uri.toString());if(s&&Date.now()>s.ignoreScrollUntil&&cfg(s.doc.uri).scrollSync&&e.visibleRanges.length)s.panel.webview.postMessage({type:'scroll',line:e.visibleRanges[0].start.line});}));
- const register=(name,fn)=>context.subscriptions.push(vscode.commands.registerCommand(name,guarded(fn)));
- const actions={
-  preview:()=>preview(),
-  copy:async()=>{const doc=await active();const editor=vscode.window.activeTextEditor;return copy(doc,editor?.document===doc?editor.selection:undefined);},
-  exportHTML:()=>exportDocument(),
-  setToken:async()=>{const c=cfg();if(!c.uploadUrl)throw new Error('先在设置中填写 piperMarkdown.uploadUrl');if(!needsCredential(c)){vscode.window.showInformationMessage('当前图床无需上传凭据。');return;}const secretKey=key(c);const token=await vscode.window.showInputBox({title:`图床上传凭据 / Upload credential · ${safeURL(c.uploadUrl).host}`,password:true,ignoreFocusOut:true,prompt:'保存在 VS Code SecretStorage，不写入 settings.json'});if(token){await context.secrets.store(secretKey,token);vscode.window.showInformationMessage('图床 Token 已保存');}},
-  clearToken:async()=>{const c=cfg();if(!c.uploadUrl)throw new Error('先配置当前图床地址');await context.secrets.delete(key(c));vscode.window.showInformationMessage('当前图床 Token 已删除');}
- };
- for(const name of ['copy','setToken','clearToken'])register('piperMarkdown.'+name,actions[name]);
- register('piperMarkdown.previewWechat',actions.preview);
- register('piperMarkdown.exportWechatHTML',actions.exportHTML);
- for(const name of ['preview','copy','setToken','clearToken'])register('piperWechat.'+name,actions[name]);
- return {copy,preview,exportHTML:exportDocument};
-}
+const vscode = require('vscode');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const { render, disposePublishingBrowser } = require('./render');
+const { upload, needsCredential, credentialScope, validateConfig } = require('./upload');
+const { prepareWechatMarkdown } = require('./wechat-markdown');
+const { writeClipboard } = require('./clipboard');
+const { readConfig } = require('./config');
+const { assertSeparateDestination } = require('./export-path');
+const { exportHTML } = require('./preview');
+const { assertWechatCompatible, inspectResources } = require('./wechat-preflight');
+const { createSettingsUI } = require('./settings-ui');
 
-module.exports={activate};
+function activate(context, integrations = {}) {
+  const t = (en, zh) => /^zh/i.test(vscode.env.language) ? zh : en;
+  const cfg = uri => readConfig(vscode.workspace, uri);
+  const secretKey = c => 'upload:' + crypto.createHash('sha256').update(credentialScope(c)).digest('hex');
+  const ui = createSettingsUI(vscode, context, cfg, secretKey);
+  context.subscriptions.push({ dispose: () => { void disposePublishingBrowser?.(); } });
+  const getState = doc => { const c = cfg(doc?.uri); return { settings: { skipLeadingH1: c.wechatSkipLeadingH1, includeTOC: c.wechatIncludeTOC, preset: c.wechatPreset, fontSize: c.fontSize, lineHeight: c.wechatLineHeight, accentColor: c.wechatAccentColor, headingStyle: c.wechatHeadingStyle, previewWidth: c.previewWidth, scrollSync: c.scrollSync } }; };
+  let copying = false;
+  function check(doc) {
+    if (!vscode.workspace.isTrusted) throw new Error(t('Trust this workspace before publishing Markdown.', '发布 Markdown 前请先信任工作区。'));
+    if (!doc || doc.uri.scheme !== 'file' || !['markdown','quarto','prompt','instructions','chatagent','skill'].includes(doc.languageId)) throw new Error(t('Open a local Markdown document or its preview first.', '请先打开本地 Markdown 文档或其预览。'));
+    return doc;
+  }
+  const active = async () => check(await integrations.resolveDocument?.() || vscode.window.activeTextEditor?.document);
+  const root = doc => vscode.workspace.getWorkspaceFolder(doc.uri)?.uri.fsPath || path.dirname(doc.uri.fsPath);
+  const options = (doc, c) => ({
+    filename: doc.uri.fsPath, root: root(doc), fontSize: c.fontSize,
+    style: { preset: c.wechatPreset, fontSize: c.fontSize, lineHeight: c.wechatLineHeight, accentColor: c.wechatAccentColor, headingStyle: c.wechatHeadingStyle, previewWidth: c.previewWidth, scrollSync: c.scrollSync },
+    wechatIncludeTOC: c.wechatIncludeTOC,
+    parseEnhanced: integrations.parseEnhanced,
+    browserPath: integrations.getBrowserPath?.(),
+  });
+  function preparedDocument(doc, selection) {
+    check(doc); const c = cfg(doc.uri);
+    const prepared = prepareWechatMarkdown(selection && !selection.isEmpty ? doc.getText(selection) : doc.getText(), c.wechatSkipLeadingH1);
+    if (!prepared.markdown.trim() && prepared.omittedTitle) throw new Error(t('There is no body after skipping the title. The clipboard was not changed.', '忽略标题后没有正文，剪贴板未修改。'));
+    assertWechatCompatible(prepared.markdown, { enhanced: !!integrations.parseEnhanced });
+    return { c, prepared };
+  }
+  function missing(code, message) { const error = new Error(message); error.code = code; return error; }
+  async function report(error, doc) {
+    if (error?.name === 'AbortError') { await vscode.window.showInformationMessage(t('Cancelled. The clipboard was not changed. Uploaded images follow your host retention policy.', '已取消，剪贴板未修改；已上传图片按图床的保留策略处理。')); return; }
+    if (error?.code === 'MISSING_UPLOAD_URL' || error?.code === 'MISSING_UPLOAD_TOKEN') {
+      const token = error.code === 'MISSING_UPLOAD_TOKEN';
+      const action = token ? t('Set upload credential…', '设置上传凭据…') : t('Configure image host…', '配置图床…');
+      const message = token ? t('An upload credential is required for images and formulas.', '上传图片和公式需要图床凭据。') : t('Choose an image host to publish local images, diagrams and formulas.', '发布本地图片、图表和公式前，请先配置图床。');
+      if (await vscode.window.showErrorMessage(message, action) === action) await (token ? ui.setToken(doc) : ui.configureHost(doc, true));
+      return;
+    }
+    await vscode.window.showErrorMessage(error?.message || String(error));
+  }
+  async function withProgress(title, work, external = {}) {
+    const run = async (notification, cancellation) => {
+      const controller = new AbortController();
+      const abort = () => controller.abort();
+      const parent = external.signal;
+      parent?.addEventListener('abort', abort, { once: true });
+      const subscription = cancellation?.onCancellationRequested(abort);
+      if (parent?.aborted || cancellation?.isCancellationRequested) controller.abort();
+      let last = 0;
+      const onProgress = progress => {
+        external.onProgress?.(progress);
+        if (notification) {
+          const names = { parse: t('Reading Markdown', '解析 Markdown'), convert: t('Preparing images and diagrams', '处理图片与图表'), upload: t('Uploading images', '上传图片'), style: t('Applying publication styles', '应用公众号样式'), clipboard: t('Writing clipboard', '写入剪贴板') };
+          const ratio = progress.total > 0 ? Math.min(1, progress.completed / progress.total) : 0;
+          const band = ({ parse: [0, 5], convert: [5, 50], upload: [55, 35], style: [90, 5], clipboard: [95, 5] })[progress.phase] || [0, 0];
+          const current = Math.max(last, band[0] + ratio * band[1]);
+          notification.report({ message: (names[progress.phase] || title) + (progress.total ? ' ' + progress.completed + '/' + progress.total : ''), increment: current - last }); last = current;
+        }
+      };
+      try { controller.signal.throwIfAborted(); return await work(controller.signal, onProgress); }
+      finally { parent?.removeEventListener('abort', abort); subscription?.dispose(); }
+    };
+    if (external.onProgress) return run();
+    return vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title, cancellable: true }, run);
+  }
+  async function renderDocument(doc, external = {}) {
+    doc = doc || await active(); const { c, prepared } = preparedDocument(doc);
+    const result = await render(prepared.markdown, { ...options(doc, c), preview: true, signal: external.signal, onProgress: external.onProgress });
+    return { ...result, diagnostics: result.warnings || [], omittedTitle: prepared.omittedTitle, settings: { skipLeadingH1: c.wechatSkipLeadingH1, includeTOC: c.wechatIncludeTOC, preset: c.wechatPreset, fontSize: c.fontSize, lineHeight: c.wechatLineHeight, accentColor: c.wechatAccentColor, headingStyle: c.wechatHeadingStyle, previewWidth: c.previewWidth, scrollSync: c.scrollSync } };
+  }
+  async function copy(doc, selection, external = {}) {
+    doc = doc || await active(); check(doc);
+    if (copying) throw new Error(t('Another copy is in progress. Finish or cancel it first.', '另一份内容正在复制，请先完成或取消。'));
+    if (process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error(t('This package supports rich-text clipboard on macOS Apple Silicon.', '此安装包的富文本剪贴板支持 macOS Apple Silicon。'));
+    copying = true;
+    try {
+      const { c, prepared } = preparedDocument(doc, selection);
+      let token;
+      async function readyForUpload() {
+        if (!c.uploadUrl) throw missing('MISSING_UPLOAD_URL', 'Image host is not configured');
+        validateConfig(c);
+        if (needsCredential(c)) { token = await context.secrets.get(secretKey(c)); if (!token) throw missing('MISSING_UPLOAD_TOKEN', 'Upload credential is not configured'); }
+      }
+      if (inspectResources?.(prepared.markdown).requiresUpload) await readyForUpload();
+      const output = await withProgress(t('Copying for WeChat', '复制到公众号'), async (signal, onProgress) => {
+        let connection;
+        const result = await render(prepared.markdown, { ...options(doc, c), signal, onProgress, resolveAsset: async (asset, assetSignal) => {
+          if (!connection) connection = readyForUpload(); await connection;
+          return upload(asset, c, token, assetSignal || signal);
+        } });
+        signal.throwIfAborted(); onProgress({ phase: 'clipboard', completed: 0, total: 1 });
+        await writeClipboard(context.asAbsolutePath('bin/clipboard'), result);
+        onProgress({ phase: 'clipboard', completed: 1, total: 1 });
+        return result;
+      }, external);
+      const retention = c.imageHostProvider === 'piper' ? t('Paste and save before the ' + c.ttl + ' image lifetime expires.', '请在图片 ' + c.ttl + ' 有效期内粘贴并保存。') : t('Image retention is managed by your host.', '图片保留期限由图床管理。');
+      const message = t('Copied for WeChat. ', '已复制到公众号。') + (prepared.omittedTitle ? t('Leading H1 omitted. ', '已忽略开头的一级标题。') : '') + (output.uniqueAssets ? output.uniqueAssets + t(' images/formulas uploaded. ', ' 张图片或公式已上传。') + retention : '') + t('Save and reopen the WeChat draft to confirm its images.', '请保存并重新打开微信草稿，确认图片已转存。');
+      void vscode.window.showInformationMessage(message);
+      return { ...output, omittedTitle: prepared.omittedTitle, message };
+    } catch (error) { error.piperReported = true; void report(error, doc).catch(() => {}); throw error; }
+    finally { copying = false; }
+  }
+  async function preview(doc) {
+    doc = doc || await active(); check(doc);
+    if (!integrations.openPublishing) throw new Error(t('Reload VS Code to initialize the publishing preview.', '请重新载入 VS Code 以初始化发布预览。'));
+    return integrations.openPublishing(doc);
+  }
+  async function exportDocument(doc, external = {}) {
+    doc = doc || await active(); check(doc);
+    const target = await vscode.window.showSaveDialog({ defaultUri: vscode.Uri.file(doc.uri.fsPath.replace(/\.[^.]+$/, '') + '.wechat.html'), filters: { HTML: ['html'] }, saveLabel: t('Export WeChat HTML', '导出公众号 HTML') });
+    if (!target) return;
+    if (target.scheme !== 'file') throw new Error(t('Choose a local export destination.', '请选择本地导出位置。'));
+    await assertSeparateDestination(doc.uri.fsPath, target.fsPath);
+    const { c, prepared } = preparedDocument(doc);
+    const result = await withProgress(t('Exporting WeChat HTML', '导出公众号 HTML'), (signal, onProgress) => render(prepared.markdown, { ...options(doc, c), signal, onProgress }), external);
+    await vscode.workspace.fs.writeFile(target, Buffer.from(exportHTML(result, path.basename(doc.uri.fsPath))));
+    void vscode.window.showInformationMessage(t('WeChat HTML exported.', '公众号 HTML 已导出。')); return target;
+  }
+  const exportStandard = (doc, format) => { if (!['html', 'pdf'].includes(format)) throw new Error('Unsupported export format'); return vscode.commands.executeCommand(format === 'html' ? 'piperMarkdown.exportHTML' : 'piperMarkdown.exportPDF', doc.uri); };
+  const service = { getState, exportStandard, render: renderDocument, copy: (doc, options) => copy(doc, undefined, options), exportHTML: exportDocument, configureHost: ui.configureHost, configureStyle: ui.configureStyle, updateSetting: ui.updateSetting, insertImage: ui.insertImage };
+  const commands = {
+    previewWechat: preview, exportWechatHTML: exportDocument,
+    copy: async () => { const doc = await active(); const editor = vscode.window.activeTextEditor; return copy(doc, editor?.document === doc ? editor.selection : undefined); },
+    setToken: async () => ui.setToken(await active().catch(() => undefined)),
+    clearToken: async () => ui.clearToken(await active().catch(() => undefined)),
+    configureImageHost: async () => ui.configureHost(await active().catch(() => undefined)),
+    configureWechatStyle: async () => ui.configureStyle(await active()),
+  };
+  for (const [name, action] of Object.entries(commands)) context.subscriptions.push(vscode.commands.registerCommand('piperMarkdown.' + name, async (...args) => { try { return await action(...args); } catch (error) { if (!error.piperReported) await report(error); } }));
+  for (const name of ['preview','copy','setToken','clearToken']) context.subscriptions.push(vscode.commands.registerCommand('piperWechat.' + name, async () => { try { return await (name === 'preview' ? preview : commands[name])(); } catch (error) { if (!error.piperReported) await report(error); } }));
+  return { copy, preview, exportHTML: exportDocument, service };
+}
+module.exports = { activate };

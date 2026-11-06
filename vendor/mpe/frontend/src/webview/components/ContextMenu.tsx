@@ -1,0 +1,1438 @@
+import {
+  mdiCancel,
+  mdiContentCopy,
+  mdiExportVariant,
+  mdiGraph,
+  mdiImageOutline,
+  mdiInformationOutline,
+  mdiMagnify,
+  mdiMagnifyMinus,
+  mdiMagnifyPlus,
+  mdiMoonFull,
+  mdiMoonNew,
+  mdiOpenInNew,
+  mdiPaletteOutline,
+  mdiPencil,
+  mdiSpaOutline,
+  mdiSync,
+  mdiTranslate,
+} from '@mdi/js';
+import Icon from '@mdi/react';
+import classNames from 'classnames';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  contextMenu,
+  Item,
+  ItemParams,
+  Menu,
+  Separator,
+  Submenu,
+} from 'react-contexify';
+import 'react-contexify/ReactContexify.css';
+import './context-menu-vscode.css';
+import PreviewContainer from '../containers/preview';
+import { t } from '../lib/i18n';
+import { copyTextToClipboard } from '../lib/utility';
+import logo from '../../server-app/assets/logo.svg';
+
+export default function ContextMenu() {
+  const {
+    config,
+    contextMenuId,
+    isVSCode,
+    isVSCodeWebExtension,
+    isShowingTranslation,
+    isWiki,
+    highlightElementBeingEdited,
+    postMessage,
+    previewSyncSource,
+    setHighlightElementBeingEdited,
+    setMarkdownEditorExpanded,
+    setNotice,
+    setShowImageHelper,
+    sourceUri,
+    theme,
+    isPresentationMode,
+    enablePreviewZenMode,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    zoomLevel,
+  } = PreviewContainer.useContainer();
+
+  // The standalone `crossnote serve` host has no VS Code around: features
+  // that need one (external editor, image helper, translation, source
+  // sync) are hidden the same way they are for the web extension. Exports
+  // are NOT hidden — the serve server runs the same engine exporters the
+  // extension host does.
+  const isServerApp = !!config.isServerApp;
+
+  // vscode-mpe#2363: capture the selection as it changes so the Copy
+  // item always copies the text that was selected when the menu opened
+  // (clicking the menu item can blur the selection first).
+  const [selectedText, setSelectedText] = useState('');
+  useEffect(() => {
+    const onSelectionChange = () => {
+      setSelectedText(window.getSelection()?.toString() ?? '');
+    };
+    document.addEventListener('selectionchange', onSelectionChange);
+    // vscode-mpe#2356: Escape closes the menu, matching native menus.
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        contextMenu.hideAll();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('selectionchange', onSelectionChange);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
+  const handleItemClick = useCallback(
+    ({ id }: ItemParams<unknown, unknown>) => {
+      switch (id) {
+        case 'open-graph-view': {
+          postMessage('openGraphView', [sourceUri.current]);
+          break;
+        }
+        case 'open-in-browser': {
+          postMessage('openInBrowser', [sourceUri.current]);
+          break;
+        }
+        case 'translate-document': {
+          // v2 toggle: if already showing the translation, switch back to
+          // the original; otherwise start a new translation.
+          if (isShowingTranslation) {
+            postMessage('restoreOriginal', [sourceUri.current]);
+          } else {
+            postMessage('translateDocument', [sourceUri.current]);
+          }
+          break;
+        }
+        case 'export-html-offline': {
+          if (isVSCode) postMessage('piperPublishing', [{ action: 'exportStandard', format: 'html' }]);
+          else postMessage('htmlExport', [sourceUri.current, true]);
+          break;
+        }
+        case 'export-standalone-wiki': {
+          postMessage('exportStandaloneWiki', [sourceUri.current]);
+          break;
+        }
+        case 'export-html-cdn': {
+          postMessage('htmlExport', [sourceUri.current, false]);
+          break;
+        }
+        case 'export-chrome-pdf': {
+          if (isVSCode) postMessage('piperPublishing', [{ action: 'exportStandard', format: 'pdf' }]);
+          else postMessage('chromeExport', [sourceUri.current, 'pdf']);
+          break;
+        }
+        case 'export-chrome-png': {
+          postMessage('chromeExport', [sourceUri.current, 'png']);
+          break;
+        }
+        case 'export-chrome-jpeg': {
+          postMessage('chromeExport', [sourceUri.current, 'jpeg']);
+          break;
+        }
+        case 'export-prince': {
+          postMessage('princeExport', [sourceUri.current]);
+          break;
+        }
+        case 'export-ebook-epub': {
+          postMessage('eBookExport', [sourceUri.current, 'epub']);
+          break;
+        }
+        case 'export-ebook-mobi': {
+          postMessage('eBookExport', [sourceUri.current, 'mobi']);
+          break;
+        }
+        case 'export-ebook-pdf': {
+          postMessage('eBookExport', [sourceUri.current, 'pdf']);
+          break;
+        }
+        case 'export-ebook-html': {
+          postMessage('eBookExport', [sourceUri.current, 'html']);
+          break;
+        }
+        case 'export-pandoc': {
+          postMessage('pandocExport', [sourceUri.current]);
+          break;
+        }
+        case 'export-markdown': {
+          postMessage('markdownExport', [sourceUri.current]);
+          break;
+        }
+        case 'toggle-zen-mode': {
+          postMessage('togglePreviewZenMode', [sourceUri.current]);
+          break;
+        }
+        case 'open-image-helper': {
+          setShowImageHelper(true);
+          break;
+        }
+        case 'sync-source': {
+          previewSyncSource();
+          break;
+        }
+        case 'select-preview-theme-atom-dark':
+        case 'select-preview-theme-atom-light':
+        case 'select-preview-theme-atom-material':
+        case 'select-preview-theme-github-dark':
+        case 'select-preview-theme-github-light':
+        case 'select-preview-theme-gothic':
+        case 'select-preview-theme-medium':
+        case 'select-preview-theme-monokai':
+        case 'select-preview-theme-newsprint':
+        case 'select-preview-theme-night':
+        case 'select-preview-theme-none':
+        case 'select-preview-theme-one-dark':
+        case 'select-preview-theme-one-light':
+        case 'select-preview-theme-solarized-dark':
+        case 'select-preview-theme-solarized-light':
+        case 'select-preview-theme-vscode':
+        case 'select-preview-theme-vue': {
+          postMessage('setPreviewTheme', [
+            sourceUri.current,
+            `${id.replace('select-preview-theme-', '')}.css`,
+          ]);
+          break;
+        }
+        case 'select-code-block-theme-auto':
+        case 'select-code-block-theme-default':
+        case 'select-code-block-theme-atom-dark':
+        case 'select-code-block-theme-atom-light':
+        case 'select-code-block-theme-atom-material':
+        case 'select-code-block-theme-coy':
+        case 'select-code-block-theme-darcula':
+        case 'select-code-block-theme-dark':
+        case 'select-code-block-theme-funky':
+        case 'select-code-block-theme-github':
+        case 'select-code-block-theme-github-dark':
+        case 'select-code-block-theme-hopscotch':
+        case 'select-code-block-theme-monokai':
+        case 'select-code-block-theme-okaidia':
+        case 'select-code-block-theme-one-dark':
+        case 'select-code-block-theme-one-light':
+        case 'select-code-block-theme-pen-paper-coffee':
+        case 'select-code-block-theme-pojoaque':
+        case 'select-code-block-theme-solarized-dark':
+        case 'select-code-block-theme-solarized-light':
+        case 'select-code-block-theme-twilight':
+        case 'select-code-block-theme-vscode':
+        case 'select-code-block-theme-vue':
+        case 'select-code-block-theme-vs':
+        case 'select-code-block-theme-xonokai': {
+          postMessage('setCodeBlockTheme', [
+            sourceUri.current,
+            `${id.replace('select-code-block-theme-', '')}.css`,
+          ]);
+          break;
+        }
+        case 'select-revealjs-theme-beige':
+        case 'select-revealjs-theme-black':
+        case 'select-revealjs-theme-blood':
+        case 'select-revealjs-theme-league':
+        case 'select-revealjs-theme-moon':
+        case 'select-revealjs-theme-night':
+        case 'select-revealjs-theme-none':
+        case 'select-revealjs-theme-serif':
+        case 'select-revealjs-theme-simple':
+        case 'select-revealjs-theme-sky':
+        case 'select-revealjs-theme-solarized':
+        case 'select-revealjs-theme-vscode':
+        case 'select-revealjs-theme-white': {
+          postMessage('setRevealjsTheme', [
+            sourceUri.current,
+            `${id.replace('select-revealjs-theme-', '')}.css`,
+          ]);
+          break;
+        }
+        case 'open-external-editor': {
+          postMessage('openExternalEditor', [sourceUri.current]);
+          break;
+        }
+        case 'zoom-in': {
+          zoomIn();
+          break;
+        }
+        case 'zoom-out': {
+          zoomOut();
+          break;
+        }
+        case 'reset-zoom': {
+          resetZoom();
+          break;
+        }
+        case 'open-crossnote': {
+          postMessage('openCrossnote');
+          break;
+        }
+        case 'open-documentation': {
+          postMessage('openDocumentation');
+          break;
+        }
+        case 'open-changelog': {
+          postMessage('openChangelog');
+          break;
+        }
+        case 'open-issues': {
+          postMessage('openIssues');
+          break;
+        }
+        case 'open-sponsors': {
+          postMessage('openSponsors');
+          break;
+        }
+        default:
+          break;
+      }
+    },
+    [
+      isShowingTranslation,
+      isVSCode,
+      postMessage,
+      previewSyncSource,
+      resetZoom,
+      setShowImageHelper,
+      sourceUri,
+      zoomIn,
+      zoomOut,
+    ],
+  );
+
+  const useNativeMenu =
+    (isVSCode || isVSCodeWebExtension) &&
+    config.useVSCodeThemeForContextMenu !== false;
+
+  const openInPreviewEditor = useCallback(() => {
+    // The editor component is intentionally not rendered in zen mode. Keep
+    // the menu item discoverable everywhere and explain on click instead of
+    // hiding the feature from users who don't know zen mode is the blocker.
+    if (enablePreviewZenMode) {
+      setNotice(t('contextMenu.inPreviewEditorZenModeNotice'));
+      return;
+    }
+    // NOTE: While a render is in flight, the hidden preview also holds a
+    // `.final-line` copy, and in zen mode the rendered one is `display: none`.
+    // Attaching the editor to an invisible element makes this menu item look
+    // broken, so only attach to a visible `.final-line` (vscode-mpe#2164).
+    const previewElement = document.querySelector('[data-for="preview"]');
+    let finalLineElement = Array.from(
+      previewElement?.querySelectorAll<HTMLElement>('.final-line') ?? [],
+    ).find((element) => element.getClientRects().length > 0);
+
+    if (!finalLineElement) {
+      // The render has no visible `.final-line` anchor (e.g. the file has no
+      // source map). Append one at the end of the preview so the editor still
+      // opens instead of doing nothing.
+      if (!previewElement) {
+        return;
+      }
+      finalLineElement = document.createElement('p');
+      // Same classes as the anchor the sourcemap transform emits, so it
+      // gets the regular "End of document" styling.
+      finalLineElement.className = 'empty-line final-line end-of-document';
+      previewElement.appendChild(finalLineElement);
+    }
+
+    if (
+      // A preview update replaces the preview DOM, which detaches the
+      // anchor a previously-opened editor portaled into; scrolling that
+      // dead element would be a silent no-op, so re-open on the fresh
+      // anchor instead.
+      highlightElementBeingEdited?.isConnected &&
+      highlightElementBeingEdited !== finalLineElement
+    ) {
+      highlightElementBeingEdited.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'start', // horizontal
+        block: 'center', // vertical
+      });
+    } else {
+      setMarkdownEditorExpanded(true);
+      setHighlightElementBeingEdited(finalLineElement);
+    }
+  }, [
+    enablePreviewZenMode,
+    highlightElementBeingEdited,
+    setHighlightElementBeingEdited,
+    setMarkdownEditorExpanded,
+    setNotice,
+  ]);
+
+  return (
+    <div data-theme={theme} className="select-none">
+      <Menu
+        id={contextMenuId}
+        theme={
+          useNativeMenu ? undefined : theme === 'dark' ? 'dark' : undefined
+        }
+        className={useNativeMenu ? 'native-vscode-menu' : undefined}
+      >
+        {isVSCode && <Item id="piper-wechat" onClick={() => postMessage('piperPublishing',[{action:'mode',value:true}])}>{String(config.locale||'en').startsWith('zh')?'公众号视图':'WeChat view'}</Item>}
+        {selectedText && (
+          <>
+            <Item
+              id="copy-selection"
+              onClick={() => copyTextToClipboard(selectedText)}
+            >
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiContentCopy} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.copy')}
+              </span>
+            </Item>
+            <Separator></Separator>
+          </>
+        )}
+        {!isServerApp && (
+          <>
+            <Item id="open-graph-view" onClick={handleItemClick}>
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiGraph} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.openGraphView')}
+              </span>
+            </Item>
+            <Separator></Separator>
+          </>
+        )}
+        {!isVSCodeWebExtension && !isServerApp && (
+          <>
+            <Item id="open-in-browser" onClick={handleItemClick}>
+              <Icon path={mdiOpenInNew} size={0.8} className="mr-2"></Icon>{' '}
+              {t('contextMenu.openInBrowser')}
+            </Item>
+            <Item id="translate-document" onClick={handleItemClick}>
+              <Icon path={mdiTranslate} size={0.8} className="mr-2"></Icon>
+              {isShowingTranslation
+                ? t('contextMenu.showOriginal')
+                : t('contextMenu.translate')}
+            </Item>
+            <Separator></Separator>
+          </>
+        )}
+        {!isVSCodeWebExtension && !isWiki && (
+          <Submenu
+            label={
+              <span className="inline-flex flex-row items-center">
+                <Icon
+                  path={mdiExportVariant}
+                  size={0.8}
+                  className="mr-2"
+                ></Icon>
+                {t('contextMenu.export')}
+              </span>
+            }
+          >
+            {/* Every export runs in the host process — the extension host
+              or the serve server both run the same engine exporters. Only
+              the read-only wiki has no host, and this whole submenu is
+              hidden there. */}
+            {isVSCode ? <Item id="export-html-offline" onClick={handleItemClick}>HTML</Item> : <Submenu
+              label={
+                <span className="inline-flex flex-row items-center">HTML</span>
+              }
+            >
+              <Item id="export-html-offline" onClick={handleItemClick}>
+                {t('contextMenu.exportHtmlOffline')}
+              </Item>
+              <Item id="export-html-cdn" onClick={handleItemClick}>
+                {t('contextMenu.exportHtmlCdn')}
+              </Item>
+            </Submenu>}
+            <Submenu
+              label={
+                <span className="inline-flex flex-row items-center">
+                  {t('contextMenu.exportChrome')}
+                </span>
+              }
+            >
+              <Item id="export-chrome-pdf" onClick={handleItemClick}>
+                PDF
+              </Item>
+              <Item id="export-chrome-png" onClick={handleItemClick}>
+                PNG
+              </Item>
+              <Item id="export-chrome-jpeg" onClick={handleItemClick}>
+                JPEG
+              </Item>
+            </Submenu>
+            <Item id="export-prince" onClick={handleItemClick}>
+              <span className="inline-flex flex-row items-center">
+                {t('contextMenu.exportPrince')}
+              </span>
+            </Item>
+            <Submenu
+              label={
+                <span className="inline-flex flex-row items-center">eBook</span>
+              }
+            >
+              <Item id="export-ebook-epub" onClick={handleItemClick}>
+                ePub
+              </Item>
+              <Item id="export-ebook-mobi" onClick={handleItemClick}>
+                Mobi
+              </Item>
+              <Item id="export-ebook-pdf" onClick={handleItemClick}>
+                PDF
+              </Item>
+              <Item id="export-ebook-html" onClick={handleItemClick}>
+                HTML
+              </Item>
+            </Submenu>
+            <Item id="export-pandoc" onClick={handleItemClick}>
+              <span className="inline-flex flex-row items-center">Pandoc</span>
+            </Item>
+            <Item id="export-markdown" onClick={handleItemClick}>
+              <span className="inline-flex flex-row items-center">
+                {t('contextMenu.saveAsMarkdown')}
+              </span>
+            </Item>
+            <Item id="export-standalone-wiki" onClick={handleItemClick}>
+              {t('contextMenu.exportStandaloneWiki')}
+            </Item>
+          </Submenu>
+        )}
+        {!isVSCodeWebExtension && !isWiki && <Separator></Separator>}
+        {!isWiki && (
+          <Submenu
+            label={
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiPencil} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.editMarkdown')}
+              </span>
+            }
+          >
+            {!isServerApp && (
+              <Item id="open-external-editor" onClick={handleItemClick}>
+                <span>
+                  {isVSCode
+                    ? t('contextMenu.openVSCodeEditor')
+                    : t('contextMenu.openExternalEditor')}
+                </span>
+              </Item>
+            )}
+            {/* The in-preview editor cannot be shown in presentation mode, so
+              the item is not offered there. In zen mode the editor is also
+              intentionally hidden, but the item stays visible — clicking it
+              explains that zen mode needs to be disabled instead of silently
+              doing nothing. */}
+            {!isPresentationMode && (
+              <Item id="open-in-preview-editor" onClick={openInPreviewEditor}>
+                <span>{t('contextMenu.openInPreviewEditor')} </span>
+              </Item>
+            )}
+          </Submenu>
+        )}
+        <Separator></Separator>
+        <Item id="toggle-zen-mode" onClick={handleItemClick}>
+          <span
+            className={classNames(
+              'inline-flex flex-row items-center',
+              enablePreviewZenMode ? 'text-primary font-bold' : '',
+            )}
+          >
+            <Icon path={mdiSpaOutline} size={0.8} className="mr-2"></Icon>
+            {t('contextMenu.zenMode')}
+          </span>
+        </Item>
+        <Separator></Separator>
+        {!isVSCodeWebExtension && !isServerApp && (
+          <>
+            <Item id="open-image-helper" onClick={handleItemClick}>
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiImageOutline} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.imageHelper')}
+              </span>
+            </Item>
+            <Separator></Separator>
+          </>
+        )}
+        {!isServerApp && (
+          <>
+            <Item id="sync-source" onClick={handleItemClick}>
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiSync} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.syncSource')}
+              </span>
+            </Item>
+            <Separator></Separator>
+          </>
+        )}
+        <Submenu
+          label={
+            <span className="inline-flex flex-row items-center">
+              <Icon path={mdiMagnify} size={0.8} className="mr-2"></Icon>
+              {t('contextMenu.zoom')} ({Math.round(zoomLevel * 100)}%)
+            </span>
+          }
+        >
+          <Item id="zoom-in" onClick={handleItemClick}>
+            <span className="inline-flex flex-row items-center">
+              <Icon path={mdiMagnifyPlus} size={0.8} className="mr-2"></Icon>
+              {t('contextMenu.zoomIn')}
+            </span>
+          </Item>
+          <Item id="zoom-out" onClick={handleItemClick}>
+            <span className="inline-flex flex-row items-center">
+              <Icon path={mdiMagnifyMinus} size={0.8} className="mr-2"></Icon>
+              {t('contextMenu.zoomOut')}
+            </span>
+          </Item>
+          <Item id="reset-zoom" onClick={handleItemClick}>
+            <span className="inline-flex flex-row items-center">
+              <Icon path={mdiMagnify} size={0.8} className="mr-2"></Icon>
+              {t('contextMenu.resetZoom')}
+            </span>
+          </Item>
+        </Submenu>
+        <Separator></Separator>
+        <Submenu
+          label={
+            <span className="inline-flex flex-row items-center">
+              <Icon path={mdiPaletteOutline} size={0.8} className="mr-2"></Icon>
+              {t('contextMenu.previewTheme')}
+            </span>
+          }
+        >
+          <Submenu
+            label={
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiMoonNew} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.light')}
+              </span>
+            }
+          >
+            <Item
+              id="select-preview-theme-atom-light"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.previewTheme === 'atom-light.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                atom-light.css
+              </span>
+            </Item>
+            <Item
+              id="select-preview-theme-github-light"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.previewTheme === 'github-light.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                github-light.css
+              </span>
+            </Item>
+            <Item id="select-preview-theme-gothic" onClick={handleItemClick}>
+              <span
+                className={
+                  config.previewTheme === 'gothic.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                gothic.css
+              </span>
+            </Item>
+            <Item id="select-preview-theme-medium" onClick={handleItemClick}>
+              <span
+                className={
+                  config.previewTheme === 'medium.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                medium.css
+              </span>
+            </Item>
+            <Item id="select-preview-theme-newsprint" onClick={handleItemClick}>
+              <span
+                className={
+                  config.previewTheme === 'newsprint.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                newsprint.css
+              </span>
+            </Item>
+            <Item id="select-preview-theme-one-light" onClick={handleItemClick}>
+              <span
+                className={
+                  config.previewTheme === 'one-light.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                one-light.css
+              </span>
+            </Item>
+            <Item
+              id="select-preview-theme-solarized-light"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.previewTheme === 'solarized-light.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                solarized-light.css
+              </span>
+            </Item>
+            <Item id="select-preview-theme-vue" onClick={handleItemClick}>
+              <span
+                className={
+                  config.previewTheme === 'vue.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                vue.css
+              </span>
+            </Item>
+          </Submenu>
+          <Submenu
+            label={
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiMoonFull} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.dark')}
+              </span>
+            }
+          >
+            <Item id="select-preview-theme-atom-dark" onClick={handleItemClick}>
+              <span
+                className={
+                  config.previewTheme === 'atom-dark.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                atom-dark.css
+              </span>
+            </Item>
+            <Item
+              id="select-preview-theme-atom-material"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.previewTheme === 'atom-material.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                atom-material.css
+              </span>
+            </Item>
+            <Item
+              id="select-preview-theme-github-dark"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.previewTheme === 'github-dark.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                github-dark.css
+              </span>
+            </Item>
+            <Item id="select-preview-theme-monokai" onClick={handleItemClick}>
+              <span
+                className={
+                  config.previewTheme === 'monokai.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                monokai.css
+              </span>
+            </Item>
+            <Item id="select-preview-theme-night" onClick={handleItemClick}>
+              <span
+                className={
+                  config.previewTheme === 'night.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                night.css
+              </span>
+            </Item>
+            <Item id="select-preview-theme-one-dark" onClick={handleItemClick}>
+              <span
+                className={
+                  config.previewTheme === 'one-dark.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                one-dark.css
+              </span>
+            </Item>
+            <Item
+              id="select-preview-theme-solarized-dark"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.previewTheme === 'solarized-dark.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                solarized-dark.css
+              </span>
+            </Item>
+          </Submenu>
+          {isVSCode && (
+            <Item id="select-preview-theme-vscode" onClick={handleItemClick}>
+              <span className="inline-flex flex-row items-center">
+                <Icon
+                  path={mdiPaletteOutline}
+                  size={0.8}
+                  className="mr-2"
+                ></Icon>
+                <span
+                  className={
+                    config.previewTheme === 'vscode.css'
+                      ? 'text-primary font-bold'
+                      : ''
+                  }
+                >
+                  {t('contextMenu.vscode')}
+                </span>
+              </span>
+            </Item>
+          )}
+          <Item id="select-preview-theme-none" onClick={handleItemClick}>
+            <span className="inline-flex flex-row items-center">
+              <Icon path={mdiCancel} size={0.8} className="mr-2"></Icon>
+              <span
+                className={
+                  config.previewTheme === 'none.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                {t('contextMenu.none')}
+              </span>
+            </span>
+          </Item>
+        </Submenu>
+        <Submenu
+          label={
+            <span className="inline-flex flex-row items-center">
+              <Icon
+                path={mdiPaletteOutline}
+                size={0.8}
+                className="mr-2 invisible"
+              ></Icon>
+              {t('contextMenu.codeBlockTheme')}
+            </span>
+          }
+        >
+          <Submenu
+            label={
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiMoonNew} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.light')}
+              </span>
+            }
+          >
+            <Item
+              id="select-code-block-theme-default"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'default.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                default.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-atom-light"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'atom-light.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                atom-light.css
+              </span>
+            </Item>
+            <Item id="select-code-block-theme-coy" onClick={handleItemClick}>
+              <span
+                className={
+                  config.codeBlockTheme === 'coy.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                coy.css
+              </span>
+            </Item>
+            <Item id="select-code-block-theme-funky" onClick={handleItemClick}>
+              <span
+                className={
+                  config.codeBlockTheme === 'funky.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                funky.css
+              </span>
+            </Item>
+            <Item id="select-code-block-theme-github" onClick={handleItemClick}>
+              <span
+                className={
+                  config.codeBlockTheme === 'github.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                github.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-one-light"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'one-light.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                one-light.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-pen-paper-coffee"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'pen-paper-coffee.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                pen-paper-coffee.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-solarized-light"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'solarized-light.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                solarized-light.css
+              </span>
+            </Item>
+            <Item id="select-code-block-theme-vue" onClick={handleItemClick}>
+              <span
+                className={
+                  config.codeBlockTheme === 'vue.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                vue.css
+              </span>
+            </Item>
+            <Item id="select-code-block-theme-vs" onClick={handleItemClick}>
+              <span
+                className={
+                  config.codeBlockTheme === 'vs.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                vs.css
+              </span>
+            </Item>
+          </Submenu>
+          <Submenu
+            label={
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiMoonFull} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.dark')}
+              </span>
+            }
+          >
+            <Item
+              id="select-code-block-theme-atom-dark"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'atom-dark.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                atom-dark.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-atom-material"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'atom-material.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                atom-material.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-darcula"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'darcula.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                default.css
+              </span>
+            </Item>
+            <Item id="select-code-block-theme-dark" onClick={handleItemClick}>
+              <span
+                className={
+                  config.codeBlockTheme === 'dark.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                dark.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-github-dark"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'github-dark.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                github-dark.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-hopscotch"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'hopscotch.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                hopscotch.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-monokai"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'monokai.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                monokai.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-okaidia"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'okaidia.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                okaidia.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-one-dark"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'one-dark.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                one-dark.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-pojoaque"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'pojoaque.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                pojoaque.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-solarized-dark"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'solarized-dark.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                solarized-dark.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-twilight"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'twilight.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                twilight.css
+              </span>
+            </Item>
+            <Item
+              id="select-code-block-theme-xonokai"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.codeBlockTheme === 'xonokai.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                xonokai.css
+              </span>
+            </Item>
+          </Submenu>
+          {isVSCode && (
+            <Item id="select-code-block-theme-vscode" onClick={handleItemClick}>
+              <span className="inline-flex flex-row items-center">
+                <Icon
+                  path={mdiPaletteOutline}
+                  size={0.8}
+                  className="mr-2"
+                ></Icon>
+                <span
+                  className={
+                    config.codeBlockTheme === 'vscode.css'
+                      ? 'text-primary font-bold'
+                      : ''
+                  }
+                >
+                  {t('contextMenu.vscode')}
+                </span>
+              </span>
+            </Item>
+          )}
+          <Item id="select-code-block-theme-auto" onClick={handleItemClick}>
+            <span className="inline-flex flex-row items-center">
+              <Icon path={mdiCancel} size={0.8} className="mr-2"></Icon>
+              <span
+                className={
+                  config.codeBlockTheme === 'auto.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                {t('contextMenu.auto')}
+              </span>
+            </span>
+          </Item>
+        </Submenu>
+        <Submenu
+          label={
+            <span className="inline-flex flex-row items-center">
+              <Icon
+                path={mdiPaletteOutline}
+                size={0.8}
+                className="mr-2 invisible"
+              ></Icon>
+              {t('contextMenu.revealjsTheme')}
+            </span>
+          }
+        >
+          <Submenu
+            label={
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiMoonNew} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.light')}
+              </span>
+            }
+          >
+            <Item id="select-revealjs-theme-beige" onClick={handleItemClick}>
+              <span
+                className={
+                  config.revealjsTheme === 'beige.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                beige.css
+              </span>
+            </Item>
+            <Item id="select-revealjs-theme-serif" onClick={handleItemClick}>
+              <span
+                className={
+                  config.revealjsTheme === 'serif.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                serif.css
+              </span>
+            </Item>
+            <Item id="select-revealjs-theme-simple" onClick={handleItemClick}>
+              <span
+                className={
+                  config.revealjsTheme === 'simple.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                simple.css
+              </span>
+            </Item>
+            <Item id="select-revealjs-theme-sky" onClick={handleItemClick}>
+              <span
+                className={
+                  config.revealjsTheme === 'sky.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                sky.css
+              </span>
+            </Item>
+            <Item
+              id="select-revealjs-theme-solarized"
+              onClick={handleItemClick}
+            >
+              <span
+                className={
+                  config.revealjsTheme === 'solarized.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                solarized.css
+              </span>{' '}
+            </Item>
+            <Item id="select-revealjs-theme-white" onClick={handleItemClick}>
+              <span
+                className={
+                  config.revealjsTheme === 'white.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                white.css
+              </span>
+            </Item>
+          </Submenu>
+          <Submenu
+            label={
+              <span className="inline-flex flex-row items-center">
+                <Icon path={mdiMoonFull} size={0.8} className="mr-2"></Icon>
+                {t('contextMenu.dark')}
+              </span>
+            }
+          >
+            <Item id="select-revealjs-theme-black" onClick={handleItemClick}>
+              <span
+                className={
+                  config.revealjsTheme === 'black.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                black.css
+              </span>
+            </Item>
+            <Item id="select-revealjs-theme-blood" onClick={handleItemClick}>
+              <span
+                className={
+                  config.revealjsTheme === 'blood.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                blood.css
+              </span>
+            </Item>
+            <Item id="select-revealjs-theme-league" onClick={handleItemClick}>
+              <span
+                className={
+                  config.revealjsTheme === 'league.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                league.css
+              </span>
+            </Item>
+            <Item id="select-revealjs-theme-moon" onClick={handleItemClick}>
+              <span
+                className={
+                  config.revealjsTheme === 'moon.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                moon.css
+              </span>
+            </Item>
+            <Item id="select-revealjs-theme-night" onClick={handleItemClick}>
+              <span
+                className={
+                  config.revealjsTheme === 'night.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                night.css
+              </span>
+            </Item>
+          </Submenu>
+          {isVSCode && (
+            <Item id="select-revealjs-theme-vscode" onClick={handleItemClick}>
+              <span className="inline-flex flex-row items-center">
+                <Icon
+                  path={mdiPaletteOutline}
+                  size={0.8}
+                  className="mr-2"
+                ></Icon>
+                <span
+                  className={
+                    config.revealjsTheme === 'vscode.css'
+                      ? 'text-primary font-bold'
+                      : ''
+                  }
+                >
+                  {t('contextMenu.vscode')}
+                </span>
+              </span>
+            </Item>
+          )}
+          <Item id="select-revealjs-theme-none" onClick={handleItemClick}>
+            <span className="inline-flex flex-row items-center">
+              <Icon path={mdiCancel} size={0.8} className="mr-2"></Icon>
+              <span
+                className={
+                  config.revealjsTheme === 'none.css'
+                    ? 'text-primary font-bold'
+                    : ''
+                }
+              >
+                {t('contextMenu.none')}
+              </span>
+            </span>
+          </Item>
+        </Submenu>
+        <Separator></Separator>
+        <Submenu
+          label={
+            <span className="inline-flex flex-row items-center">
+              <Icon
+                path={mdiInformationOutline}
+                size={0.8}
+                className="mr-2"
+              ></Icon>
+              {t('contextMenu.about')}
+            </span>
+          }
+        >
+          <Item id="open-crossnote" onClick={handleItemClick}>
+            {/* Trailing logo — matches "Sponsor This Project 😊", whose
+              emoji also trails the label, instead of the leading icons of
+              the action items above. */}
+            <span className="inline-flex flex-row items-center">
+              Crossnote
+              <img
+                src={logo}
+                width="20"
+                height="20"
+                alt=""
+                aria-hidden="true"
+                className="ml-2"
+              ></img>
+            </span>
+          </Item>
+          <Item id="open-documentation" onClick={handleItemClick}>
+            {t('contextMenu.documentation')}
+          </Item>
+          <Item id="open-changelog" onClick={handleItemClick}>
+            {t('contextMenu.changelog')}
+          </Item>
+          <Item id="open-issues" onClick={handleItemClick}>
+            {t('contextMenu.featureRequests')}
+          </Item>
+          <Item id="open-sponsors" onClick={handleItemClick}>
+            {t('contextMenu.sponsors')}
+          </Item>
+        </Submenu>
+      </Menu>
+    </div>
+  );
+}

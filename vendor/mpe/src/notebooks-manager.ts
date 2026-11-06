@@ -1,4 +1,8 @@
 import {
+  EXPLICIT_MERMAID_STYLE,
+  hasMermaidStyleChoice,
+} from './piper-export-appearance';
+import {
   Notebook,
   NotebookConfig,
   PreviewMode,
@@ -10,6 +14,7 @@ import {
   MarkdownPreviewEnhancedConfig,
   PreviewColorScheme,
   getMPEConfig,
+  inspectMPEConfig,
   getUserMPEConfig,
   HOST_ONLY_CONFIG_KEYS,
 } from './config';
@@ -236,11 +241,26 @@ class NotebooksManager {
         getUserMPEConfig(key) ?? vscodeMPEConfig[key],
       ]),
     );
-    return {
+    const mermaidSetting = inspectMPEConfig('mermaidTheme');
+    const explicitMermaidSetting =
+      !!mermaidSetting &&
+      [
+        mermaidSetting.globalValue,
+        mermaidSetting.workspaceValue,
+        mermaidSetting.workspaceFolderValue,
+        mermaidSetting.globalLanguageValue,
+        mermaidSetting.workspaceLanguageValue,
+        mermaidSetting.workspaceFolderLanguageValue,
+      ].some((value) => value !== undefined);
+    const mergedConfig = {
       ...vscodeMPEConfig,
       ...globalConfig,
       ...workspaceConfig,
       ...hostConfig,
+      [EXPLICIT_MERMAID_STYLE]:
+        explicitMermaidSetting ||
+        hasMermaidStyleChoice(globalConfig) ||
+        hasMermaidStyleChoice(workspaceConfig),
       // Neither a repository config nor a user script can grant execution consent.
       enableScriptExecution:
         getMPEConfig<boolean>('enableScriptExecution') === true,
@@ -248,6 +268,7 @@ class NotebooksManager {
         (globalConfig.globalCss ?? '') + (workspaceConfig.globalCss ?? ''),
       previewTheme,
     };
+    return mergedConfig;
   }
 
   /**

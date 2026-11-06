@@ -1,9 +1,14 @@
+import { parseEnhanced } from './publishing-parser';
+import { setPublishingService, showPublishing, invalidatePublishing, type PublishingService } from './publishing-bridge';
 import * as vscode from 'vscode';
 import { PreviewProvider, getActivePreviewSourceUri } from './preview-provider';
 import { isMarkdownFile, isVSCodeWebExtension } from './utils';
 import { exportSnapshot, type PiperExportOptions } from './piper-exports';
 
 export interface PiperEnhancedAPI {
+  setPublishingService(service: PublishingService): void;
+  parseEnhanced: typeof parseEnhanced;
+  openPublishingPreview(uri?: vscode.Uri): Promise<void>;
   getActiveSourceUri(): vscode.Uri | undefined;
   openPreview(
     uri?: vscode.Uri,
@@ -59,8 +64,17 @@ export function createPiperAPI(
       options,
     );
   }
-  return {
+  context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(event => invalidatePublishing(event.document.uri)), vscode.workspace.onDidChangeConfiguration(() => invalidatePublishing()));
+  const api: PiperEnhancedAPI = {
     getActiveSourceUri,
+    setPublishingService,
+    parseEnhanced,
+    async openPublishingPreview(uri) {
+      const document = await sourceDocument(uri);
+      await api.openPreview(document.uri, { preserveFocus: false });
+      const provider = await PreviewProvider.getPreviewContentProvider(document.uri, context);
+      for (const panel of provider.getPreviews(document.uri) ?? []) showPublishing(panel);
+    },
     async openPreview(uri, options = {}) {
       const document = await sourceDocument(uri);
       const provider = await PreviewProvider.getPreviewContentProvider(
@@ -86,6 +100,7 @@ export function createPiperAPI(
     exportHTML: (uri, options) => exportDocument('html', uri, options),
     exportPDF: (uri, options) => exportDocument('pdf', uri, options),
   };
+  return api;
 }
 
 export { getActivePreviewSourceUri } from './preview-provider';

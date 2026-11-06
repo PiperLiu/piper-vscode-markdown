@@ -23,7 +23,8 @@ async function activate(context) {
     return doc;
   };
   const openEnhanced = async doc => enhanced.openPreview(doc.uri, { beside: true });
-  const wechat = require('./wechat-extension').activate(context, { resolveDocument, openEnhanced });
+  const wechat = require('./wechat-extension').activate(context, { resolveDocument, openEnhanced, openPublishing: doc => enhanced.openPublishingPreview(doc.uri), parseEnhanced: enhanced.parseEnhanced, getBrowserPath: () => { const current = vscode.workspace.getConfiguration('piperMarkdown.enhanced').inspect('chromePath')?.globalValue; return current ?? vscode.workspace.getConfiguration('markdown-preview-enhanced').inspect('chromePath')?.globalValue ?? ''; } });
+  enhanced.setPublishingService(wechat.service);
   const register = (id, action) => context.subscriptions.push(vscode.commands.registerCommand(id, async (...args) => {
     try { return await action(...args); }
     catch (error) { vscode.window.showErrorMessage(error.message || String(error)); throw error; }

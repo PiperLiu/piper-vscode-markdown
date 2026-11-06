@@ -1,5 +1,6 @@
 'use strict';
-const MarkdownIt=require('markdown-it');
+const MarkdownItModule=require('markdown-it');
+const MarkdownIt=MarkdownItModule.default??MarkdownItModule;
 const parser=new MarkdownIt({html:false});
 const diagramNames=new Set(['mermaid','plantuml','puml','dot','graphviz','viz','d2','wavedrom','vega','vega-lite','vegalite','tikz','flow','flowchart','sequence','ditaa','blockdiag','actdiag','nwdiag','packetdiag','rackdiag','seqdiag','nomnoml','pikchr']);
 function parseTOCMarker(line){
@@ -30,7 +31,7 @@ function parseTOCMarker(line){
 }
 function isTOCMarker(line){return Boolean(parseTOCMarker(line));}
 
-function inspectWechatCompatibility(markdown){
+function inspectWechatCompatibility(markdown,{enhanced=false}={}){
  if(markdown.length>1_000_000)throw new Error('文章过长（上限 100 万字符）');
  const issues=[];
  const add=(kind,line)=>{if(!issues.some(issue=>issue.kind===kind))issues.push({kind,line:line+1});};
@@ -38,24 +39,29 @@ function inspectWechatCompatibility(markdown){
   const line=token.map?.[0]??0;
   if(token.type==='fence'){
    const info=token.info.trim(),name=info.replace(/^[{.]*/, '').split(/[\s}]/)[0].toLowerCase();
-   if(diagramNames.has(name))add(`${name} 图表`,line);
+   if(diagramNames.has(name)&&!['mermaid','wavedrom','vega','vega-lite'].includes(name)&&!(enhanced&&['dot','graphviz','viz'].includes(name)))add(`${name} 图表`,line);
    if(/\b(?:cmd|run_on_save|run_on_start)\b/.test(info))add('可执行代码块',line);
   }
   if(token.type!=='inline')continue;
   const text=(token.children||[]).map(child=>child.type==='text'?child.content:['softbreak','hardbreak'].includes(child.type)?'\n':child.type==='code_inline'?' ':'').join('');
   for(const [offset,row]of text.split('\n').entries()){
    if(isTOCMarker(row))continue;
-   if(/^\s*(?:<!--\s*)?@import\s+/.test(row))add('文件导入 @import',line+offset);
-   if(/!?\[\[[^\]\n]+\]\]/.test(row))add('双链 / 嵌入引用',line+offset);
-   if(/^\s*(?:!!!|:::)\s*\w/.test(row))add('扩展提示块',line+offset);
-   if(/\[\^[^\]\n]+\]/.test(row))add('脚注',line+offset);
+   if(!enhanced&&/^\s*(?:<!--\s*)?@import\s+/.test(row))add('文件导入 @import',line+offset);
+   if(!enhanced&&/!?\[\[[^\]\n]+\]\]/.test(row))add('双链 / 嵌入引用',line+offset);
+   if(!enhanced&&/^\s*(?:!!!|:::)\s*\w/.test(row))add('扩展提示块',line+offset);
   }
  }
  return issues;
 }
 function compatibilityMessage(issues){
  if(!issues.length)return '';
- return '公众号排版暂不能转换：'+issues.map(issue=>`${issue.kind}（第 ${issue.line} 行）`).join('、')+'。请先将图表转为本地 PNG，或将引用展开为普通 Markdown；增强预览与标准导出仍可使用这些功能。';
+ return '公众号排版暂不能转换：'+issues.map(issue=>`${issue.kind}（第 ${issue.line} 行）`).join('、')+'。请检查对应内容或使用本地图片；源文保持不变。';
 }
-function assertWechatCompatible(markdown){const issues=inspectWechatCompatibility(markdown);if(issues.length)throw new Error(compatibilityMessage(issues));}
-module.exports={parseTOCMarker,isTOCMarker,inspectWechatCompatibility,compatibilityMessage,assertWechatCompatible};
+function assertWechatCompatible(markdown,options){const issues=inspectWechatCompatibility(markdown,options);if(issues.length)throw new Error(compatibilityMessage(issues));}
+function inspectResources(markdown){
+ const result={localImages:0,formulas:0,diagrams:0,requiresUpload:false};
+ const visit=tokens=>{for(const token of tokens){if(token.children)visit(token.children);if(token.type==='image'&&!/^https?:\/\//i.test(token.attrGet('src')||''))result.localImages++;if(token.type==='fence'&&diagramNames.has(token.info.trim().split(/\s/)[0].toLowerCase()))result.diagrams++;if(token.type==='text')result.formulas+=(token.content.match(/\$[^\s$][^$]*\$/g)||[]).length;}};
+ visit(parser.parse(markdown,{}));if(/(?:^|\n)\s*\$\$/.test(markdown))result.formulas++;
+ result.requiresUpload=!!(result.localImages||result.formulas||result.diagrams);return result;
+}
+module.exports={inspectResources,parseTOCMarker,isTOCMarker,inspectWechatCompatibility,compatibilityMessage,assertWechatCompatible};

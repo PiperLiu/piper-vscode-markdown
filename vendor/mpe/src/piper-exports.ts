@@ -1,3 +1,5 @@
+export { EXPLICIT_MERMAID_STYLE } from './piper-export-appearance';
+import { automaticMermaidExportAppearance } from './piper-export-appearance';
 import { MarkdownEngine, type Notebook } from 'crossnote';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -38,7 +40,36 @@ export function createSnapshotEngine(
         ? Buffer.from(markdown, 'utf8').toString(encoding ?? 'utf8')
         : notebook.fs.readFile(filePath, encoding),
   };
-  return new MarkdownEngine({ notebook: snapshotNotebook, filePath: source });
+  const engine = new MarkdownEngine({
+    notebook: snapshotNotebook,
+    filePath: source,
+  });
+  const template = engine.generateHTMLTemplateForExport.bind(engine);
+  engine.generateHTMLTemplateForExport = async (html, yaml = {}, options) => {
+    const before = snapshotNotebook.config;
+    const appearance = automaticMermaidExportAppearance(
+      before,
+      yaml,
+      options,
+      markdown,
+    );
+    if (!appearance) return template(html, yaml, options);
+    snapshotNotebook.config = {
+      ...before,
+      mermaidTheme: appearance.theme,
+      globalCss:
+        before.globalCss +
+        (appearance.backdrop
+          ? '\n.markdown-preview div.mermaid { background: #fff; padding: 12px; border-radius: 4px; }'
+          : ''),
+    };
+    try {
+      return await template(html, yaml, options);
+    } finally {
+      snapshotNotebook.config = before;
+    }
+  };
+  return engine;
 }
 
 export function resolveExportTarget(

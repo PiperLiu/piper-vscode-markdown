@@ -1,0 +1,7 @@
+{
+  "project": "https://github.com/shd101wyy/crossnote",
+  "tag": "0.9.42",
+  "commit": "e4eca048bf081e7c8cfbcc806530fb15fc5aa025",
+  "scope": "Webview source plus its renderer helper and logo; engine remains the locked npm package",
+  "license": "University of Illinois/NCSA"
+}

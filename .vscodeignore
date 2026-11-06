@@ -37,3 +37,6 @@ vendor/mpe/eslint.config.mjs
 vendor/mpe/.husky/**
 
 .gitattributes
+
+vendor/mpe/frontend/src/**
+vendor/mpe/build-frontend.cjs

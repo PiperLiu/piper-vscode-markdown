@@ -2,7 +2,7 @@
   "name": "piper-markdown-review",
   "displayName": "Piper Markdown",
   "description": "Enhanced Markdown preview, HTML/PDF, TOC and WeChat publishing. Markdown 增强预览、导出、目录与公众号排版。",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "publisher": "piperliu",
   "license": "MIT",
   "engines": {
@@ -65,6 +65,14 @@
       {
         "command": "piperMarkdown.clearToken",
         "title": "Piper Markdown: Clear Image Upload Token"
+      },
+      {
+        "command": "piperMarkdown.configureImageHost",
+        "title": "Piper Markdown: Configure Image Host"
+      },
+      {
+        "command": "piperMarkdown.configureWechatStyle",
+        "title": "Piper Markdown: Configure WeChat Style"
       },
       {
         "command": "piperMarkdown.enhanced.openGraphView",
@@ -401,6 +409,43 @@
             "default": "",
             "description": "Optional Qiniu object key directory prefix / 七牛云对象键目录前缀。",
             "scope": "machine"
+          },
+          "piperMarkdown.wechatIncludeTOC": {
+            "type": "boolean",
+            "default": false,
+            "description": "Automatically add an article TOC to WeChat output. Explicit source TOC markers remain respected. 自动添加公众号正文目录；保留原文中的目录标记。"
+          },
+          "piperMarkdown.wechatPreset": {
+            "type": "string",
+            "default": "classic",
+            "enum": [
+              "classic",
+              "minimal",
+              "editorial"
+            ],
+            "description": "WeChat publication style preset / 公众号样式预设。"
+          },
+          "piperMarkdown.wechatLineHeight": {
+            "type": "number",
+            "default": 1.85,
+            "minimum": 1.2,
+            "maximum": 2.5,
+            "description": "WeChat body line height / 公众号正文行距。"
+          },
+          "piperMarkdown.wechatAccentColor": {
+            "type": "string",
+            "default": "#16856e",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "WeChat accent color in six-digit hex / 公众号主题色（六位十六进制）。"
+          },
+          "piperMarkdown.wechatHeadingStyle": {
+            "type": "string",
+            "default": "border",
+            "enum": [
+              "border",
+              "plain"
+            ],
+            "description": "WeChat heading decoration / 公众号标题装饰。"
           }
         }
       },
@@ -1208,7 +1253,7 @@
     "build:native": "node scripts/build-native.js",
     "build": "node scripts/build.js",
     "package": "npm run build && node scripts/package.js",
-    "check": "node --check src/main.js && node --check src/wechat-extension.js && node --check media/preview.js",
+    "check": "node --check src/main.js && node --check src/wechat-extension.js && node --check src/settings-ui.js",
     "sync:manifest": "node scripts/sync-manifest.js"
   },
   "dependencies": {
@@ -1217,7 +1262,9 @@
     "mathjax-full": "3.2.2",
     "highlight.js": "11.11.1",
     "juice": "11.0.1",
-    "markdown-it-cjk-friendly": "2.0.3"
+    "markdown-it-cjk-friendly": "2.0.3",
+    "markdown-it-footnote": "3.0.3",
+    "cheerio": "1.0.0"
   },
   "devDependencies": {
     "@vscode/vsce": "3.6.0"
@@ -1247,5 +1294,13 @@
   "overrides": {
     "cheerio": "1.0.0",
     "undici@6": "6.29.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PiperLiu/piper-vscode-markdown.git"
+  },
+  "homepage": "https://github.com/PiperLiu/piper-vscode-markdown#readme",
+  "bugs": {
+    "url": "https://github.com/PiperLiu/piper-vscode-markdown/issues"
   }
 }

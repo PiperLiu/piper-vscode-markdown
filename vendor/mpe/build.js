@@ -5,6 +5,8 @@ const { context, build } = require('esbuild');
 const { polyfillNode } = require('esbuild-plugin-polyfill-node');
 const { crossnoteSafetyPlugin } = require('./src/crossnote-build-safety.cjs');
 const cjkMarkdownPlugin = require('./src/markdown-it-cjk-build.cjs');
+const { buildFrontend } = require('./build-frontend.cjs');
+const publishingRuntimePlugin = { name:'piper-publishing-runtime', setup(build) { build.onResolve({filter:/^piper-publishing-(puppeteer|cheerio)$/},args=>({path:require.resolve(args.path.endsWith('puppeteer')?'puppeteer-core':'cheerio',{paths:[dirname(require.resolve('crossnote'))]})})); } };
 
 /**
  * @type {import('esbuild').Plugin}
@@ -122,6 +124,7 @@ const nativeConfig = {
   metafile: true,
   plugins: [
     crossnoteSafetyPlugin,
+    publishingRuntimePlugin,
     cjkMarkdownPlugin,
     externalTikzPlugin,
     safeLessPlugin,
@@ -156,6 +159,7 @@ const serveCliConfig = {
   metafile: true,
   plugins: [
     crossnoteSafetyPlugin,
+    publishingRuntimePlugin,
     cjkMarkdownPlugin,
     externalTikzPlugin,
     safeLessPlugin,
@@ -202,6 +206,7 @@ const webConfig = {
   external: ['vscode', 'node-tikzjax', 'stream/promises', 'stream', 'sharp'],
   plugins: [
     crossnoteSafetyPlugin,
+    publishingRuntimePlugin,
     cjkMarkdownPlugin,
     polyfillNode({
       polyfills: {
@@ -380,6 +385,7 @@ async function main() {
       await Promise.all([
         build(nativeConfig),
         build(tikzRunnerConfig),
+        build({ ...nativeConfig, plugins:[publishingRuntimePlugin], entryPoints:['./src/publishing-runtime.ts'], outfile:'./out/native/publishing-runtime.cjs' }),
         build(webConfig),
         ...(serveCliAvailable ? [build(serveCliConfig)] : []),
       ]);
@@ -388,6 +394,7 @@ async function main() {
           'Skipped the crossnote serve CLI bundle (crossnote without a ./cli export)',
         );
       }
+      await buildFrontend();
       removeBundledTexFiles();
       copyXhrSyncWorker();
       copyMarkdownYoWasm();

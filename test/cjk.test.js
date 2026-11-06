@@ -71,7 +71,7 @@ test('math still renders inside Chinese strong emphasis without altering its sou
  const source='这是**公式$x^2$。**后文';
  const result=await render(source,{filename:path.join(directory,'article.md')});
  assert.match(result.html,/<strong\b[^>]*>公式<img\b[^>]*class="math-image"[\s\S]*?。<\/strong>后文/);
- assert.equal(result.assets,1);assert.equal(result.text,source);
+ assert.equal(result.assets,1);assert.equal(result.text,'这是公式x^2。后文');
  const preview=await enhanced.parseMD(source,options);
  assert.match(preview.html,/<strong>公式[\s\S]*?katex[\s\S]*?。<\/strong>后文/);
 });

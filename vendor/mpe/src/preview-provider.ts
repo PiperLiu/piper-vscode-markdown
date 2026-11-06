@@ -1,3 +1,4 @@
+import { attachPublishing, invalidatePublishing } from './publishing-bridge';
 import { Mutex } from 'async-mutex';
 import { ImageUploader, Notebook, PreviewMode, utility } from 'crossnote';
 import { tmpdir } from 'os';
@@ -689,6 +690,8 @@ export class PreviewProvider {
         'preview.svg',
       );
 
+      attachPublishing(previewPanel, () => this.previewToSourceUriMap.get(previewPanel));
+
       // NOTE: We only register for the webview event listeners once.
       if (!this.initializedPreviews.has(previewPanel)) {
         this.initializedPreviews.add(previewPanel);
@@ -854,6 +857,7 @@ export class PreviewProvider {
       // HTML was installed. Until then, the panel still represents its prior
       // source (or has no reliably rendered source yet).
       this.previewToSourceUriMap.set(previewPanel, sourceUri);
+      invalidatePublishing(sourceUri);
     } catch (error) {
       vscode.window.showErrorMessage(String(error));
       console.error(error);

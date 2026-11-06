@@ -5,7 +5,12 @@ const crypto = require('node:crypto');
 const MarkdownIt = require('markdown-it');
 // The pinned ESM plugin supports Node 18; loading once keeps preview/copy identical.
 const cjkFriendlyPlugin = import('markdown-it-cjk-friendly').then(module => module.default);
-const {parseTOCMarker}=require('./wechat-preflight');
+const {parseTOCMarker,assertWechatCompatible}=require('./wechat-preflight');
+const {publishingStyle}=require('./publishing-style');
+const {normalizeHTML}=require('./publishing-html');
+const {rasterizeSVG,disposePublishingBrowser}=require('./publishing-browser');
+const {validateSVG}=require('./publishing-svg');
+const footnotes=require('markdown-it-footnote');
 const hljs = require('highlight.js');
 const juice = require('juice');
 const { Resvg } = require('@resvg/resvg-js');
@@ -27,11 +32,12 @@ function safeURL(raw) {
 }
 const rasterCache=new Map();let rasterCacheBytes=0;
 function rasterSVG(svg, width, loadSystemFonts=true) {
+ validateSVG(svg);
  // Prevent resvg from following local references in untrusted SVGs. Embedded raster data only.
  if (/<!DOCTYPE|<!ENTITY|<script\b|<foreignObject\b|(?:href|xlink:href)\s*=\s*["']\s*(?!#|data:image\/(?:png|jpeg|webp);base64,)/i.test(svg) || /url\(\s*["']?\s*(?!#)/i.test(svg)) throw new Error('SVG 包含外部资源、脚本或不支持的嵌入内容');
  const cacheKey=crypto.createHash('sha256').update(svg).update(String(width)+':'+loadSystemFonts).digest('hex');
  const cached=rasterCache.get(cacheKey);if(cached){rasterCache.delete(cacheKey);rasterCache.set(cacheKey,cached);return cached;}
- const renderer=new Resvg(svg,{fitTo:{mode:'width',value:width},font:{loadSystemFonts,defaultFontFamily:'PingFang SC'}});
+ const renderer=new Resvg(svg,{fitTo:{mode:'width',value:width},font:{loadSystemFonts,defaultFontFamily:'PingFang SC'},background:'#ffffff'});
  if (renderer.width * renderer.height > 20_000_000 || renderer.height > 20000) throw new Error('SVG 输出尺寸过大');
  const png=renderer.render().asPng();
  // Cache bytes only, never temporary URLs or credentials. Cap total retained raster data.
@@ -45,10 +51,12 @@ function mathImage(tex, display, fontSize) {
  const widthEx=Number(svg.match(/\bwidth="([\d.]+)ex"/)?.[1]);
  const heightEx=Number(svg.match(/\bheight="([\d.]+)ex"/)?.[1]);
  if (!widthEx || !heightEx) throw new Error('无法确定公式尺寸');
- const width=Math.max(1,widthEx*fontSize/2),height=Math.max(1,heightEx*fontSize/2);
- const depth=Number(svg.match(/vertical-align:\s*(-?[\d.]+)ex/)?.[1]||0)*fontSize/2;
+ const width=Math.max(1,widthEx*fontSize/2),height=Math.max(1,heightEx*fontSize/2),padding=2;
+ const depth=Number(svg.match(/vertical-align:\s*(-?[\d.]+)ex/)?.[1]||0)*fontSize/2-padding;
  svg=svg.replace(/currentColor/g,'#242424').replace(/width="[^"]+"/,`width="${width}"`).replace(/height="[^"]+"/,`height="${height}"`);
- return {bytes:rasterSVG(svg,Math.min(4096,Math.ceil(width*3)),false),mime:'image/png',width,height,depth};
+ // Make the pixels themselves readable in dark clients; CSS alone does not survive paste.
+ svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width+padding*2}" height="${height+padding*2}"><rect width="100%" height="100%" fill="#ffffff"/><g transform="translate(${padding} ${padding})">${svg}</g></svg>`;
+ return {bytes:rasterSVG(svg,Math.min(4096,Math.ceil((width+padding*2)*3)),false),mime:'image/png',width:width+padding*2,height:height+padding*2,depth};
 }
 function mathPlugin(md) {
  md.inline.ruler.before('escape','piper_math',(state,silent)=>{
@@ -67,14 +75,14 @@ function mathPlugin(md) {
   state.line=next+1;return true;
  });
 }
-async function localImage(raw,filename,root) {
+async function localImage(raw,filename,root,options={}) {
  const decoded=decodeURIComponent(raw);
  if(/^[a-z][a-z0-9+.-]*:/i.test(decoded)||decoded.startsWith('//'))throw new Error('不支持的图片地址：'+raw);
  const realRoot=await fs.realpath(root);const real=await fs.realpath(path.resolve(path.dirname(filename),decoded));
  const relative=path.relative(realRoot,real);if(relative.startsWith('..'+path.sep)||relative==='..'||path.isAbsolute(relative))throw new Error('图片超出工作区：'+raw);
  const stat=await fs.stat(real);if(stat.size>MAX)throw new Error('图片超过 20 MiB：'+raw);
  let bytes=await fs.readFile(real);let mime;
- if(path.extname(real).toLowerCase()==='.svg'){bytes=rasterSVG(bytes.toString('utf8'),1600);mime='image/png';}
+ if(path.extname(real).toLowerCase()==='.svg'){bytes=(await rasterizeSVG(bytes.toString('utf8'),1600,options)).bytes;mime='image/png';}
  else if(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))mime='image/png';
  else if(bytes[0]===255&&bytes[1]===216&&bytes[2]===255)mime='image/jpeg';
  else if(/^GIF8[79]a/.test(bytes.subarray(0,6).toString()))mime='image/gif';
@@ -82,7 +90,6 @@ async function localImage(raw,filename,root) {
  else throw new Error('不支持的图片格式：'+raw);
  return {bytes,mime};
 }
-const css=`section{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#242424;line-height:1.85;word-wrap:break-word;background:#fff;}p{margin:16px 0;}h1{font-size:26px;line-height:1.5;margin:28px 0 18px;}h2{font-size:22px;margin:26px 0 14px;border-bottom:2px solid #16856e;padding-bottom:8px;}h3{font-size:18px;margin:22px 0 12px;}strong{font-weight:700;color:#155f51;}blockquote{margin:18px 0;padding:8px 16px;background:#f2f6f5;border-left:3px solid #16856e;color:#53615d;}img{max-width:100%;height:auto;}img.article-image{display:block;margin:16px auto;}pre{padding:16px;background:#f5f6f8;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.6;}code{font-family:Menlo,Consolas,monospace;}a{color:#16856e;text-decoration:underline;}table{border-collapse:collapse;width:100%;font-size:14px;}th,td{border:1px solid #d6dedb;padding:8px;text-align:left;}th{background:#edf4f1;}li{margin:6px 0;}.hljs-keyword,.hljs-selector-tag{color:#8354a3;}.hljs-string,.hljs-attr{color:#35724c;}.hljs-number,.hljs-literal{color:#9a5729;}.hljs-comment{color:#777;}hr{border:0;border-top:1px solid #ddd;margin:24px 0;}`;
 function tocPlugin(md){
  md.block.ruler.before('paragraph','piper_toc',(state,start,end,silent)=>{
   if(state.sCount[start]-state.blkIndent>=4)return false;
@@ -92,47 +99,49 @@ function tocPlugin(md){
   state.line=start+1;return true;
  },{alt:['paragraph','reference','blockquote']});
 }
-async function render(markdown,{filename,root=path.dirname(filename),fontSize=16,resolveAsset,signal,preview=false}={}) {
- if(markdown.length>1_000_000)throw new Error('文章过长（上限 100 万字符）');
- const assets=[];const md=new MarkdownIt({html:false,linkify:false,typographer:false,highlight:(s,lang)=>lang&&hljs.getLanguage(lang)?hljs.highlight(s,{language:lang,ignoreIllegals:true}).value:esc(s)}).use(await cjkFriendlyPlugin).use(mathPlugin).use(tocPlugin);
- const tokens=md.parse(markdown,{});
- const headings=[];const hasTOC=tokens.some(t=>t.type==='piper_toc');
+function plainHTML(markdown,preview,plugin){
+ const md=new MarkdownIt({html:false,linkify:false,typographer:false,highlight:(text,lang)=>lang&&hljs.getLanguage(lang)?hljs.highlight(text,{language:lang,ignoreIllegals:true}).value:esc(text)}).use(plugin).use(mathPlugin).use(tocPlugin).use(footnotes);
+ const tokens=md.parse(markdown,{}),headings=[];
  for(let i=0;i<tokens.length;i++){
-  const t=tokens[i];
-  if(preview&&t.map&&t.nesting!==-1)t.attrSet('data-source-line',String(t.map[0]));
-  if(t.type==='heading_open'){
-   const id='piper-heading-'+headings.length;
-   const inline=tokens[i+1];
-   const title=inline.children?.map(c=>c.type==='image'?c.content:c.type.endsWith('_open')||c.type.endsWith('_close')?'':c.content).join('')||inline.content;
-   headings.push({id,title,level:Number(t.tag.slice(1)),line:t.map[0]});
-   if(preview||hasTOC)t.attrSet('id',id);
+  const token=tokens[i];if(token.map&&token.nesting!==-1)token.attrSet('data-source-line',String(token.map[0]));
+  if(token.type==='heading_open'){const id='piper-heading-'+headings.length,inline=tokens[i+1];headings.push({id,title:inline.content,level:Number(token.tag.slice(1)),line:token.map[0]});token.attrSet('id',id);}
+  if(token.type==='inline'&&tokens[i-2]?.type==='list_item_open'&&token.children?.[0]?.type==='text'){
+   const first=token.children[0],match=first.content.match(/^\[([ xX])\]\s+/);if(match){first.content=first.content.slice(match[0].length);const marker=new token.constructor('html_inline','',0);marker.content=`<span class="task-marker">${match[1]===' '?'☐':'☑'}</span>`;token.children.unshift(marker);}
   }
  }
-
- async function walk(list){for(const t of list){signal?.throwIfAborted();if(t.children)await walk(t.children);
-  if(t.type==='image'){
-   const src=t.attrGet('src');if(/^https?:\/\//i.test(src)){safeURL(src);continue;}
-   const asset=await localImage(src,filename,root);assets.push(asset);t.attrSet('src',await resolve(asset));t.attrSet('class','article-image');
-  }
-  if(t.type==='piper_math'||t.type==='piper_math_block'){
-   const display=t.type==='piper_math_block';const asset=mathImage(t.content,display,fontSize);assets.push(asset);const src=await resolve(asset);
-   const img=`<img class="math-image" src="${esc(src)}" alt="${esc(t.content)}" style="width:${asset.width.toFixed(2)}px;max-width:100%;height:auto;vertical-align:${asset.depth.toFixed(2)}px;${display?'display:block;margin:16px auto;':'display:inline-block;margin:0 2px;'}" />`;
-   t.meta=display?`<p>${img}</p>`:img;
-  }
- }}
- const memo=new Map();async function resolve(asset){const key=crypto.createHash('sha256').update(asset.bytes).digest('hex');if(!memo.has(key)){memo.set(key,resolveAsset?await resolveAsset(asset):`data:${asset.mime};base64,${asset.bytes.toString('base64')}`);}return memo.get(key);}
- md.renderer.rules.piper_toc=(tokens,index)=>{
-  const options=tokens[index].meta,tree={level:0,children:[]},stack=[tree];
-  for(const heading of headings.filter(h=>h.level>=options.depthFrom&&h.level<=options.depthTo)){
-   while(stack.length>1&&stack[stack.length-1].level>=heading.level)stack.pop();
-   const node={...heading,children:[]};stack[stack.length-1].children.push(node);stack.push(node);
-  }
-  const tag=options.orderedList?'ol':'ul';
-  const list=nodes=>`<${tag}>${nodes.map(h=>`<li><a href="#${h.id}">${esc(h.title)}</a>${h.children.length?list(h.children):''}</li>`).join('')}</${tag}>`;
-  return `<section class="article-toc"><p><strong>目录</strong></p>${list(tree.children)}</section>`;
- };
- await walk(tokens);md.renderer.rules.piper_math=(ts,i)=>ts[i].meta;md.renderer.rules.piper_math_block=(ts,i)=>ts[i].meta;
- const html=juice.inlineContent(`<section style="font-size:${fontSize}px">${md.renderer.render(tokens,md.options,{})}</section>`,css,{removeStyleTags:true});
- return {html,text:markdown,assets:assets.length,uniqueAssets:memo.size,headings,characters:Array.from(markdown.replace(/\s/g,'')).length};
+ md.renderer.rules.piper_math=(items,index)=>`<span data-math="${esc(items[index].content)}" data-display="false"></span>`;
+ md.renderer.rules.piper_math_block=(items,index)=>`<p data-source-line="${items[index].map[0]}"><span data-math="${esc(items[index].content)}" data-display="true"></span></p>`;
+ const fence=md.renderer.rules.fence;
+ md.renderer.rules.fence=(items,index,...args)=>{const token=items[index],kind=token.info.trim().split(/\s/)[0].toLowerCase();if(['mermaid','wavedrom','vega','vega-lite'].includes(kind))return `<div class="${kind}" data-source-line="${token.map[0]}">${esc(token.content)}</div>`;return fence(items,index,...args);};
+ md.renderer.rules.piper_toc=(items,index)=>tocHTML(headings,items[index].meta);
+ return md.renderer.render(tokens,md.options,{});
 }
-module.exports={render,safeURL,localImage,mathImage,rasterSVG};
+function tocHTML(headings,options={depthFrom:1,depthTo:6,orderedList:false}){
+ const tree={level:0,children:[]},stack=[tree];for(const h of headings.filter(h=>h.level>=options.depthFrom&&h.level<=options.depthTo)){while(stack.length>1&&stack[stack.length-1].level>=h.level)stack.pop();const node={...h,children:[]};stack[stack.length-1].children.push(node);stack.push(node);}const tag=options.orderedList?'ol':'ul';
+ const list=nodes=>`<${tag}>${nodes.map(h=>`<li><a href="#${h.id}">${esc(h.title)}</a>${h.children.length?list(h.children):''}</li>`).join('')}</${tag}>`;
+ return `<section class="article-toc"><p><strong>目录</strong></p>${list(tree.children)}</section>`;
+}
+async function render(markdown,{filename,root=path.dirname(filename),fontSize=16,resolveAsset,signal,preview=false,parseEnhanced,browserPath,style={},wechatIncludeTOC=false,onProgress}={}){
+ if(markdown.length>1_000_000)throw new Error('文章过长（上限 100 万字符）');signal?.throwIfAborted();
+ assertWechatCompatible(markdown,{enhanced:!!parseEnhanced});const theme=publishingStyle(style,fontSize);
+ onProgress?.({phase:'parse',completed:0,total:1});
+ const explicitTOCs=[];let parseSource=markdown;if(parseEnhanced){const lines=markdown.split('\n'),excluded=new Set();for(const token of new MarkdownIt({html:false}).parse(markdown,{})){if(['fence','code_block'].includes(token.type)&&token.map)for(let i=token.map[0];i<token.map[1];i++)excluded.add(i);}for(let i=0;i<lines.length;i++){if(excluded.has(i))continue;const toc=parseTOCMarker(lines[i]);if(toc){const marker='PIPERTOC'+crypto.randomBytes(16).toString('hex');explicitTOCs.push({marker,options:toc});lines[i]=marker;}}parseSource=lines.join('\n');}const enhanced=parseEnhanced?await parseEnhanced(parseSource,{filename,root,signal}):undefined;
+ const raw=enhanced?enhanced.html:plainHTML(markdown,preview,await cjkFriendlyPlugin);signal?.throwIfAborted();onProgress?.({phase:'parse',completed:1,total:1});
+ const assets=[],unique=new Map();
+ const collect=asset=>{signal?.throwIfAborted();if(asset.bytes.length>MAX)throw new Error('图片超过 20 MiB');assets.push(asset);const key=crypto.createHash('sha256').update(asset.bytes).digest('hex');if(!unique.has(key))unique.set(key,{asset,index:unique.size});return 'piper-asset:'+unique.get(key).index;};
+ const result=await normalizeHTML(raw,{filename,root,fontSize:theme.fontSize,signal,preview,browserPath,mathImage,localImage,safeURL,collect,onProgress});
+ for(const toc of explicitTOCs){const nodes=result.$('p').filter((_,node)=>result.$(node).text().trim()===toc.marker);if(nodes.length!==1)throw new Error('增强引擎未能保留正文目录位置');nodes.replaceWith(tocHTML(result.headings,toc.options));}
+ for(const toc of result.tocMarkers)result.$(toc.element).replaceWith(tocHTML(result.headings,toc.options));
+ if(wechatIncludeTOC&&!result.$('.article-toc').length&&result.headings.length)result.$.root().prepend(tocHTML(result.headings));
+ const entries=[...unique.values()];let next=0,completed=0;const urls=[];
+ if(resolveAsset)onProgress?.({phase:'upload',completed:0,total:entries.length});
+ const controller=new AbortController(),combined=signal?AbortSignal.any([signal,controller.signal]):controller.signal;
+ async function consume(){while(next<entries.length){combined.throwIfAborted();const entry=entries[next++];try{const url=resolveAsset?await resolveAsset(entry.asset,combined):`data:${entry.asset.mime};base64,${entry.asset.bytes.toString('base64')}`;combined.throwIfAborted();if(resolveAsset)safeURL(url);urls[entry.index]=url;completed++;if(resolveAsset)onProgress?.({phase:'upload',completed,total:entries.length});}catch(error){controller.abort(error);throw error;}}}
+ const jobs=Array.from({length:Math.min(resolveAsset?3:1,entries.length)},()=>consume());const settled=await Promise.allSettled(jobs);const error=settled.find(item=>item.status==='rejected');if(error)throw error.reason;signal?.throwIfAborted();
+ result.$('img').each((_,node)=>{const image=result.$(node),src=image.attr('src')||'';if(src.startsWith('piper-asset:'))image.attr('src',urls[Number(src.slice(12))]);});
+ if(!preview){result.$('[data-source-line]').removeAttr('data-source-line');const targets=new Set(result.$('a[href^="#"]').toArray().map(a=>result.$(a).attr('href').slice(1)));result.$('h1,h2,h3,h4,h5,h6').each((_,heading)=>{const node=result.$(heading);if(!targets.has(node.attr('id')))node.removeAttr('id');});}
+ onProgress?.({phase:'style',completed:0,total:1});const html=juice.inlineContent(`<section class="piper-article">${result.$.html()}</section>`,theme.css,{removeStyleTags:true});signal?.throwIfAborted();onProgress?.({phase:'style',completed:1,total:1});
+ const textTree=result.$.root().clone();textTree.find('img').each((_,image)=>{const node=result.$(image);node.replaceWith(result.$('<span>').text(node.attr('alt')||'图片'));});textTree.find('br').replaceWith('\n');textTree.find('li').each((_,item)=>{const node=result.$(item),parent=node.parent();node.prepend(parent.is('ol')?String(parent.children('li').index(item)+Number(parent.attr('start')||1))+'. ':'• ');});textTree.find('th,td').append('\t');textTree.find('p,h1,h2,h3,h4,h5,h6,li,tr,pre,blockquote,section,div').append('\n');const text=textTree.text().replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+ return {html,text,assets:assets.length,uniqueAssets:unique.size,headings:result.headings,warnings:result.warnings,characters:Array.from(markdown.replace(/\s/g,'')).length};
+}
+module.exports={render,safeURL,localImage,mathImage,rasterSVG,disposePublishingBrowser};
