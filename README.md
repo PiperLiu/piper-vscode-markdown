@@ -43,7 +43,7 @@ Automatic article-TOC insertion is controlled by `piperMarkdown.wechatIncludeTOC
 
 Local image insertion is an explicit source-editing action. Publication upload is separate: it converts local references for the copied article without replacing paths in your Markdown or changing original image files. The preview retains links and source navigation.
 
-Previewing does not upload publication assets. The toolbar shows phase progress for parsing, conversion, upload, styling, and clipboard writing, with a **Cancel** action during preparation. Copy prepares every required asset before updating the clipboard; failure or cancellation preserves the prior clipboard. Any images already uploaded before cancellation follow the host's retention policy. The editor command copies a selection when present, otherwise the document; the preview's copy action uses the whole represented document.
+Previewing does not upload publication assets. The toolbar shows phase progress for parsing, conversion, upload, styling, and clipboard writing, with a **Cancel** action during preparation. Upload progress shows the image count, queue state, and a live retry countdown when the host is busy. Copy prepares every required asset before updating the clipboard; failure or cancellation preserves the prior clipboard. Any images already uploaded before cancellation follow the host's retention policy. The editor command copies a selection when present, otherwise the document; the preview's copy action uses the whole represented document.
 
 PNG, JPEG, WebP, and GIF images are supported; GIF animation is preserved. Local SVG and formulas are rasterized for publication. Formula images carry an opaque background so their text remains legible when pasted into a dark reading environment.
 
@@ -141,7 +141,7 @@ Piper 内置 [Markdown Preview Enhanced](https://github.com/shd101wyy/vscode-mar
 
 本地插图是明确的源文编辑动作；发布上传与之分开。发布时转换复制文章中的本地资源地址，不替换 Markdown 内的本地路径，也不修改原图片。预览保留链接和源文定位。
 
-查看预览不会上传发布资源。工具栏显示解析、转换、上传、排版和写入剪贴板的阶段进度，准备过程中可点击**取消**。复制时先处理全部资源，成功后再更新剪贴板；失败或取消保留原剪贴板。取消前已上传的图片仍按图床保留策略处理。编辑器命令有选区时复制选区，否则复制全文；预览里的复制操作使用该面板对应的整篇文档。
+查看预览不会上传发布资源。工具栏显示解析、转换、上传、排版和写入剪贴板的阶段进度，准备过程中可点击**取消**。复制时先处理全部资源，成功后再更新剪贴板；失败或取消保留原剪贴板。取消前已上传的图片仍按图床保留策略处理。编辑器命令有选区时复制选区，否则复制全文；预览里的复制操作使用该面板对应的整篇文档。 上传进度会显示图片数量、排队状态，以及图床繁忙时的重试倒计时。
 
 支持 PNG、JPEG、WebP 和 GIF，GIF 保留动画；本地 SVG 和公式会栅格化后用于发布。公式图片自带不透明背景，粘贴到深色阅读环境时也能保持文字清晰。
 

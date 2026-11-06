@@ -1,5 +1,6 @@
 'use strict';
 const {randomUUID}=require('node:crypto');
+const {requestWithRateLimitRetry,withPiperUploadSlot}=require('./upload-policy');
 const {safeURL}=require('./render');
 
 const EXTENSIONS={'image/png':'png','image/jpeg':'jpg','image/gif':'gif','image/webp':'webp'};
@@ -119,7 +120,7 @@ function httpHeaderValue(value){
  return value;
 }
 
-async function upload(asset,config,token,signal){
+async function upload(asset,config,token,signal,{onProgress}={}){
  signal?.throwIfAborted();
  const type=provider(config),url=endpoint(config),ext=EXTENSIONS[asset.mime];
  if(!ext||!asset.bytes||asset.bytes.byteLength>20*1024*1024)throw new Error('Use PNG, JPEG, GIF or WebP images up to 20 MiB. / 仅支持不超过 20 MiB 的 PNG、JPEG、GIF 或 WebP 图片');
@@ -164,12 +165,21 @@ async function upload(asset,config,token,signal){
   }
  }
  form.append(fileField,new Blob([asset.bytes],{type:asset.mime}),`image.${ext}`);
- const response=await fetch(url,{method:'POST',headers,body:form,redirect:'error',signal:AbortSignal.any([AbortSignal.timeout(120000),...(signal?[signal]:[])])});
- if(!response.ok){
-  await response.body?.cancel();
-  throw new Error(`Image upload failed (HTTP ${response.status}). Use Publish → Image host to check the connection and credential. / 图床上传失败（HTTP ${response.status}）${response.status===507?'：容量已满':[401,403].includes(response.status)?'：请检查 Token 及上传权限':''}`);
- }
- let value=await responseJSON(response);
+ // One deadline covers queueing, every retry, and response parsing. FormData
+ // and Qiniu's object key are created once and reused only after explicit 429.
+ const uploadSignal=AbortSignal.any([AbortSignal.timeout(120000),...(signal?[signal]:[])]);
+ const send=async()=>{
+  const response=await requestWithRateLimitRetry(()=>fetch(url,{method:'POST',headers,body:form,redirect:'error',signal:uploadSignal}),uploadSignal,onProgress);
+  if(!response.ok){
+   await response.body?.cancel();
+   const hint=[401,403].includes(response.status)?' Check the upload credential and permissions in Publish → Image host. / 请在“发布 → 图床设置”检查上传凭据及权限。':response.status===507?' Image storage is full. / 图床容量已满。':' Check the image host service and try again. / 请检查图床服务后重试。';
+   const error=new Error(`Image upload failed (HTTP ${response.status}). / 图床上传失败（HTTP ${response.status}）。${hint}`);
+   error.status=response.status;throw error;
+  }
+  return responseJSON(response);
+ };
+ let value=await(type==='piper'?withPiperUploadSlot(url.origin,uploadSignal,send,onProgress):send());
+ uploadSignal.throwIfAborted();
  if(type==='qiniu'){
   const key=value&&Object.hasOwn(value,'key')?value.key:undefined;
   const encoded=qiniuKey(key).join('/');

@@ -49,8 +49,8 @@ test('发布预检明确拦截图表执行和导入，普通代码示例不误�
  assert.deepEqual(inspectWechatCompatibility('**说明** @import "作为行内文字"\n\n`@import "x"`\n\n```js\nconst cmd = "mermaid";\n```\n\n    @import "example"'),[]);
 });
 
-function harness({markdown='正文',selection,renderError,cancelled=false,assets=false,exportPathError,config={},selectionMarkdown='选区内容',uploadError=true,missingToken=false,locale='zh-cn'}={}){
- const commands=new Map(),errors=[],writes=[],renders=[],secretReads=[],messages=[],exports=[];
+function harness({markdown='正文',selection,renderError,cancelled=false,assets=false,exportPathError,config={},selectionMarkdown='选区内容',uploadError=true,missingToken=false,locale='zh-cn',realPipeline=false}={}){
+ const commands=new Map(),errors=[],writes=[],renders=[],secretReads=[],messages=[],exports=[],notifications=[];
  const uri={scheme:'file',fsPath:'/workspace/article.md',toString:()=> 'file:///workspace/article.md'};
  const doc={version:1,languageId:'markdown',uri,lineCount:10,getText:s=>s===selection&&selection?selectionMarkdown:markdown};
  const disposal=()=>({dispose(){}});
@@ -58,17 +58,17 @@ function harness({markdown='正文',selection,renderError,cancelled=false,assets
  const vscode={
   env:{language:locale},
   workspace:{isTrusted:true,getWorkspaceFolder:()=>({uri:{fsPath:'/workspace'}}),onDidChangeTextDocument:disposal,onDidOpenTextDocument:disposal,onDidChangeConfiguration:disposal,fs:{writeFile:async(uri,bytes)=>exports.push({uri,bytes})}},
-  window:{activeTextEditor:undefined,onDidChangeTextEditorVisibleRanges:disposal,showErrorMessage:m=>errors.push(m),showInformationMessage:m=>messages.push(m),withProgress:async(o,fn)=>fn({report(){}},{isCancellationRequested:cancelled,onCancellationRequested:disposal}),showInputBox:async()=>undefined,showSaveDialog:async options=>options.defaultUri},
+  window:{activeTextEditor:undefined,onDidChangeTextEditorVisibleRanges:disposal,showErrorMessage:m=>errors.push(m),showInformationMessage:m=>messages.push(m),withProgress:async(o,fn)=>fn({report:value=>notifications.push(value)},{isCancellationRequested:cancelled,onCancellationRequested:disposal}),showInputBox:async()=>undefined,showSaveDialog:async options=>options.defaultUri},
   commands:{registerCommand:(name,fn)=>{commands.set(name,fn);return disposal();}},ProgressLocation:{Notification:1},Uri:{file:fsPath=>({scheme:'file',fsPath})}
  };
  const context={subscriptions:[],secrets:{get:async k=>{secretReads.push(k);return missingToken?undefined:'test-secret';},store:async()=>{},delete:async()=>{}},asAbsolutePath:relative=>'/extension/'+relative};
  const renderStub=async(text,options)=>{renders.push(text);if(renderError)throw new Error(renderError);if(assets)await options.resolveAsset({bytes:Buffer.from('asset'),mime:'image/png'});return {html:'<p>'+text+'</p>',text,uniqueAssets:assets?1:0};};
  const module={exports:{}};
- const customRequire=name=>name==='vscode'?vscode:name==='./render'?{render:renderStub,safeURL}:name==='./upload'?{...require('../src/upload'),upload:async()=>{if(uploadError)throw new Error('上传失败');return 'https://images.example/asset';}}:name==='./export-path'?{assertSeparateDestination:async()=>{if(exportPathError)throw new Error(exportPathError);}}:name==='./clipboard'?{writeClipboard:async(helper,result)=>writes.push(result)}:name==='./config'?{readConfig:()=>cfg}:name.startsWith('./')?require(path.join(__dirname,'../src',name.slice(2))):require(name);
+ const customRequire=name=>name==='vscode'?vscode:name==='./render'?{render:realPipeline?render:renderStub,safeURL}:name==='./upload'?{...require('../src/upload'),upload:realPipeline?require('../src/upload').upload:async()=>{if(uploadError)throw new Error('上传失败');return 'https://images.example/asset';}}:name==='./export-path'?{assertSeparateDestination:async()=>{if(exportPathError)throw new Error(exportPathError);}}:name==='./clipboard'?{writeClipboard:async(helper,result)=>writes.push(result)}:name==='./config'?{readConfig:()=>cfg}:name.startsWith('./')?require(path.join(__dirname,'../src',name.slice(2))):require(name);
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../src/wechat-extension.js'),'utf8'),{require:customRequire,module,exports:module.exports,process:{platform:'darwin',arch:'arm64'},Buffer,AbortController,setTimeout,clearTimeout},{filename:'wechat-extension.js'});
  let resolutions=0;
  const api=module.exports.activate(context,{resolveDocument:async()=>{resolutions++;return doc;},openEnhanced:async()=>{}});
- return {commands,api,doc,vscode,errors,writes,renders,secretReads,messages,exports,cfg,get resolutions(){return resolutions;}};
+ return {commands,api,doc,vscode,errors,writes,renders,secretReads,messages,exports,notifications,cfg,get resolutions(){return resolutions;}};
 }
 
 test('微信命令复用预览文档解析，保留旧别名与原SecretStorage键',async()=>{
@@ -133,4 +133,46 @@ test('missing credentials are actionable before expensive render and pure text n
  assert.equal(plain.secretReads.length,0);assert.equal(plain.writes.length,1);
  const host=harness({markdown:'![local](image.png)',config:{uploadUrl:''},locale:'en'});await host.commands.get('piperMarkdown.copy')();
  assert.equal(host.renders.length,0);assert.match(host.errors[0],/image host/);
+});
+
+
+async function uploadHost(t,handler){
+ const http=require('node:http'),requests=[];let active=0,maxActive=0;
+ const server=http.createServer(async(req,res)=>{
+  active++;maxActive=Math.max(maxActive,active);const chunks=[];for await(const chunk of req)chunks.push(chunk);
+  const form=await new Response(Buffer.concat(chunks),{headers:{'content-type':req.headers['content-type']}}).formData();
+  const received={headers:req.headers,path:req.url,form};requests.push(received);
+  try{await handler(received,res,requests.length);}finally{active--;}
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ t.after(()=>new Promise(resolve=>{server.closeAllConnections();server.close(resolve);}));
+ return {url:'http://127.0.0.1:'+server.address().port+'/upload',requests,get maxActive(){return maxActive;}};
+}
+
+test('Piper copy uses real renderer/uploads, displays retry detail and only writes a complete clipboard result',async t=>{
+ const host=await uploadHost(t,async(request,res,index)=>{
+  assert.equal(request.headers.authorization,'Bearer test-secret');assert.equal(request.path,'/upload?ttl=3h');
+  assert.ok((await request.form.get('file').arrayBuffer()).byteLength>0);
+  if(index===1){res.writeHead(429,{'Retry-After':'0'});res.end('private-limit');}
+  else {await new Promise(resolve=>setTimeout(resolve,20));res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({url:'https://images.example/'+index}));}
+ });
+ const h=harness({markdown:'$a$ $b$ $c$',realPipeline:true,config:{uploadUrl:host.url}});
+ const result=await h.api.copy(h.doc);
+ assert.equal(result.uniqueAssets,3);assert.equal(host.requests.length,4);assert.equal(host.maxActive,1);assert.equal(h.writes.length,1);assert.equal(h.errors.length,0);
+ assert.equal((h.writes[0].html.match(/https:\/\/images.example\//g)||[]).length,3);
+ assert.ok(h.notifications.some(p=>/第 1\/3 张.*第 1\/3 次重试/.test(p.message)));
+ assert.ok(h.notifications.some(p=>/第 3\/3 张/.test(p.message)));
+ assert.doesNotMatch(JSON.stringify(h.notifications),/private-limit|test-secret/);
+});
+
+test('retry exhaustion and cancellation preserve the clipboard and successful-image progress',async t=>{
+ for(const cancel of [false,true]){
+  const host=await uploadHost(t,async(_,res)=>{res.writeHead(429,{'Retry-After':cancel?'10':'0'});res.end();});
+  const h=harness({markdown:'$a$ $b$ $c$',realPipeline:true,config:{uploadUrl:host.url}}),controller=new AbortController(),progress=[];
+  await assert.rejects(h.api.copy(h.doc,undefined,{signal:controller.signal,onProgress:p=>{progress.push(p);if(cancel&&p.state==='retrying')controller.abort();}}),error=>cancel?error.name==='AbortError':error.code==='UPLOAD_RATE_LIMITED');
+  assert.equal(h.writes.length,0);assert.equal(host.requests.length,cancel?1:4);assert.equal(progress.filter(p=>p.phase==='clipboard').length,0);
+  const waits=progress.filter(p=>p.state==='retrying');assert.ok(waits.length);for(const p of waits){assert.equal(p.completed,0);assert.equal(p.total,3);}
+  assert.equal(h.errors.length,cancel?0:1);
+  if(!cancel){assert.match(h.errors[0],/429/);assert.doesNotMatch(h.errors[0],/Token|credential|图床设置/);}
+ }
 });

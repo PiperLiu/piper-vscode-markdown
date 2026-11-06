@@ -28,7 +28,12 @@ function createSettingsUI(vscode, context, cfg, secretKey) {
     if (key === 'wechatPreset') { const preset = { classic: ['#16856e', 'border', 1.85], minimal: ['#374151', 'plain', 1.75], editorial: ['#9b4f32', 'border', 1.9] }[value]; await updateSetting(doc, 'wechatAccentColor', preset[0]); await updateSetting(doc, 'wechatHeadingStyle', preset[1]); await updateSetting(doc, 'wechatLineHeight', preset[2]); }
   }
   async function promptToken(c) {
-    return await vscode.window.showInputBox({ title: t('Image host upload credential', '图床上传凭据') + ' · ' + safeURL(c.uploadUrl).host, password: true, ignoreFocusOut: true, prompt: t('Saved in VS Code SecretStorage. Never written to settings or Markdown. For Qiniu, enter an upload token, not an AccessKey or SecretKey.', '保存在 VS Code SecretStorage，不写入设置或 Markdown。七牛请填上传 Token，不要填 AccessKey 或 SecretKey。'), validateInput: value => /[\x00-\x1f\x7f]/.test(value) || value.length > 16384 ? t('Invalid credential.', '凭据包含无效字符或过长。') : undefined });
+    const instruction = c.imageHostProvider === 'qiniu'
+      ? t('Enter a Qiniu upload token, not an AccessKey or SecretKey.', '请输入七牛上传 Token，不要填写 AccessKey 或 SecretKey。')
+      : c.imageHostProvider === 'generic'
+        ? t('Enter the upload credential issued by your image host.', '请输入图床服务提供的上传凭据。')
+        : t('Enter the upload token configured by your Piper host administrator, without the Bearer prefix.', '请输入 Piper 图床管理员配置的上传 Token，不要加 Bearer 前缀。');
+    return await vscode.window.showInputBox({ title: t('Image host upload credential', '图床上传凭据') + ' · ' + safeURL(c.uploadUrl).host, password: true, ignoreFocusOut: true, prompt: instruction + ' ' + t('Saved in VS Code SecretStorage, never in settings or Markdown.', '保存在 VS Code SecretStorage，不写入设置或 Markdown。'), validateInput: value => /[\x00-\x1f\x7f]/.test(value) || value.length > 16384 ? t('Invalid credential.', '凭据包含无效字符或过长。') : undefined });
   }
   async function setToken(doc) {
     const c = cfg(doc?.uri);

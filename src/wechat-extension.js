@@ -69,7 +69,7 @@ function activate(context, integrations = {}) {
           const ratio = progress.total > 0 ? Math.min(1, progress.completed / progress.total) : 0;
           const band = ({ parse: [0, 5], convert: [5, 50], upload: [55, 35], style: [90, 5], clipboard: [95, 5] })[progress.phase] || [0, 0];
           const current = Math.max(last, band[0] + ratio * band[1]);
-          notification.report({ message: (names[progress.phase] || title) + (progress.total ? ' ' + progress.completed + '/' + progress.total : ''), increment: current - last }); last = current;
+          notification.report({ message: progress.message || (names[progress.phase] || title) + (progress.total ? ' ' + progress.completed + '/' + progress.total : ''), increment: current - last }); last = current;
         }
       };
       try { controller.signal.throwIfAborted(); return await work(controller.signal, onProgress); }
@@ -99,9 +99,9 @@ function activate(context, integrations = {}) {
       if (inspectResources?.(prepared.markdown).requiresUpload) await readyForUpload();
       const output = await withProgress(t('Copying for WeChat', '复制到公众号'), async (signal, onProgress) => {
         let connection;
-        const result = await render(prepared.markdown, { ...options(doc, c), signal, onProgress, resolveAsset: async (asset, assetSignal) => {
+        const result = await render(prepared.markdown, { ...options(doc, c), signal, onProgress, resolveAsset: async (asset, assetSignal, uploadProgress) => {
           if (!connection) connection = readyForUpload(); await connection;
-          return upload(asset, c, token, assetSignal || signal);
+          return upload(asset, c, token, assetSignal || signal, uploadProgress);
         } });
         signal.throwIfAborted(); onProgress({ phase: 'clipboard', completed: 0, total: 1 });
         await writeClipboard(context.asAbsolutePath('bin/clipboard'), result);

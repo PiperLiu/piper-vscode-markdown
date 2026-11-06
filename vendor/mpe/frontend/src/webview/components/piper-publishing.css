@@ -291,3 +291,9 @@ body.piper-publishing .topbar {
 .piper-publish-feedback {
   z-index: 1;
 }
+
+.piper-publish-progress .piper-progress-detail {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}

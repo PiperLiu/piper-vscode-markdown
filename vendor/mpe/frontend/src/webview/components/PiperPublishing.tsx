@@ -2,6 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { contextMenu } from 'react-contexify';
 import PreviewContainer from '../containers/preview';
 import './piper-publishing.css';
+import {
+  initialPublishingProgress,
+  advancePublishingProgress,
+  publishingProgressDetail,
+} from '../lib/publishing-progress';
 
 const frameScript = `const channel=CHANNEL; const send=(data)=>parent.postMessage({piperFrame:channel,...data},'*');
 let ignore=false;addEventListener('message',e=>{if(e.source!==parent||e.data?.piperFrame!==channel)return;const m=e.data;if(m.type==='anchor'){document.getElementById(m.id)?.scrollIntoView();}if(m.type==='line'){const blocks=[...document.querySelectorAll('[data-source-line]')];const b=blocks.filter(x=>Number(x.dataset.sourceLine)<=m.line).pop();if(b){ignore=true;b.scrollIntoView();setTimeout(()=>ignore=false,400);}}});
@@ -37,9 +42,11 @@ export default function PiperPublishing() {
     [renderFailed, setRenderFailed] = useState(false),
     [toc, setToc] = useState(true),
     [loading, setLoading] = useState(false),
-    [progress, setProgress] = useState({ value: 0, phase: 'parse' }),
-    [toolbarHeight, setToolbarHeight] = useState(36);
+    [progress, setProgress] = useState(initialPublishingProgress),
+    [toolbarHeight, setToolbarHeight] = useState(36),
+    [progressHeight, setProgressHeight] = useState(50);
   const toolbar = useRef<HTMLDivElement>(null),
+    progressBox = useRef<HTMLDivElement>(null),
     frame = useRef<HTMLIFrameElement>(null),
     menu = useRef<HTMLDetailsElement>(null),
     readingScroll = useRef(0),
@@ -147,7 +154,7 @@ export default function PiperPublishing() {
         }));
       }
       if (m.type === 'loading') {
-        setProgress({ value: 0, phase: 'parse' });
+        setProgress(initialPublishingProgress());
         setLoading(true);
         setRenderFailed(false);
         setError('');
@@ -174,31 +181,13 @@ export default function PiperPublishing() {
       if (m.type === 'busy') {
         setBusy(!!m.value);
         if (m.value) {
-          setProgress({ value: 0, phase: 'parse' });
+          setProgress(initialPublishingProgress());
           setNotice('');
           setError('');
         }
       }
       if (m.type === 'progress') {
-        const p = m.value;
-        const stages: Record<string, [number, number]> = {
-          parse: [0, 0.08],
-          convert: [0.08, 0.62],
-          upload: [0.62, 0.92],
-          style: [0.92, 0.97],
-          clipboard: [0.97, 1],
-        };
-        const stage = stages[p?.phase];
-        if (stage) {
-          const fraction =
-            p.total > 0 ? Math.max(0, Math.min(1, p.completed / p.total)) : 1;
-          const value = stage[0] + (stage[1] - stage[0]) * fraction;
-          setProgress((previous) =>
-            value >= previous.value ? { value, phase: p.phase } : previous,
-          );
-        }
-        if (typeof p === 'string') setNotice(p);
-        else if (p?.message) setNotice(p.message);
+        setProgress((previous) => advancePublishingProgress(previous, m.value));
       }
       if (m.type === 'copied')
         setNotice(
@@ -258,7 +247,20 @@ export default function PiperPublishing() {
     observer.observe(element);
     return () => observer.disconnect();
   }, [enabled]);
+  useEffect(() => {
+    if (!enabled || !progressBox.current) return;
+    const element = progressBox.current;
+    const observer = new ResizeObserver(() =>
+      setProgressHeight(Math.ceil(element.getBoundingClientRect().height)),
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [enabled, busy, loading]);
   if (!enabled) return null;
+  const progressDetail = publishingProgressDetail(
+    progress,
+    String(config.locale || 'en'),
+  );
   const phaseLabels: Record<string, string> = {
     parse: t('Parsing Markdown', '解析 Markdown'),
     convert: t('Converting images and diagrams', '转换图片与图表'),
@@ -438,6 +440,7 @@ export default function PiperPublishing() {
         {(busy || loading) && (
           <div
             className="piper-publish-progress"
+            ref={progressBox}
             role="status"
             aria-live="polite"
           >
@@ -446,6 +449,9 @@ export default function PiperPublishing() {
                 t('Preparing publication', '准备发布')}{' '}
               · {Math.round(progress.value * 100)}%
             </span>
+            {!!progressDetail && (
+              <span className="piper-progress-detail">{progressDetail}</span>
+            )}
             <progress
               max={1}
               value={progress.value}
@@ -472,7 +478,8 @@ export default function PiperPublishing() {
         <div
           className="piper-publication-workspace"
           style={{
-            paddingTop: toolbarHeight + 16 + (busy || loading ? 58 : 0),
+            paddingTop:
+              toolbarHeight + 16 + (busy || loading ? progressHeight + 8 : 0),
           }}
           data-source={result?.source}
           data-version={result?.version}

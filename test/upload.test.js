@@ -204,3 +204,76 @@ test('unsupported or oversized assets are rejected before upload',async t=>{
 test('signed URL credentials cannot be persisted as upload endpoint query settings',()=>{
  for(const query of ['X-Amz-Signature=private','sig=private','credential=private'])assert.throws(()=>credentialScope({imageHostProvider:'generic',uploadUrl:'https://upload.example/?'+query}),/凭据不能放在 URL/);
 });
+
+
+test('Piper serializes a single-slot host across paths and TTLs, with a pause between complete uploads',async t=>{
+ let active=0,max=0,rejected=0;const timing=[];
+ const host=await server(t,async(request,res)=>{
+  const row={started:Date.now()};timing.push(row);max=Math.max(max,++active);
+  if(active>1){rejected++;res.statusCode=429;res.setHeader('Retry-After','0');res.end();active--;return;}
+  await new Promise(resolve=>setTimeout(resolve,25));active--;row.finished=Date.now();json(res,{url:'https://images.example/'+timing.length});
+ });
+ const progress=[];
+ const result=await Promise.all(Array.from({length:4},(_,i)=>upload(asset,{uploadUrl:host.url+'/'+i,ttl:i%2?'3h':'24h'},'test-token',undefined,{onProgress:value=>progress.push(value)})));
+ assert.equal(result.length,4);assert.equal(max,1);assert.equal(rejected,0);assert.equal(host.received.length,4);
+ for(let i=1;i<timing.length;i++)assert.ok(timing[i].started-timing[i-1].finished>=225,'Piper uploads must retain a minimum interval');
+ assert.ok(progress.some(p=>p.state==='queued'));assert.ok(progress.some(p=>p.state==='pacing'));assert.equal(progress.filter(p=>p.state==='uploading').length,4);
+});
+
+test('cancelling a queued Piper upload promptly removes it without sending or blocking the next image',async t=>{
+ let release,started;const gate=new Promise(resolve=>{release=resolve;}),arrival=new Promise(resolve=>{started=resolve;});
+ const host=await server(t,async(_,res)=>{started();if(host.received.length===1)await gate;json(res,{url:'https://images.example/'+host.received.length});});
+ const first=upload(asset,{uploadUrl:host.url},'token');await arrival;
+ const controller=new AbortController(),second=upload(asset,{uploadUrl:host.url},'token',controller.signal),third=upload(asset,{uploadUrl:host.url},'token');
+ const start=Date.now();controller.abort();await assert.rejects(second,{name:'AbortError'});assert.ok(Date.now()-start<250);assert.equal(host.received.length,1);
+ release();await Promise.all([first,third]);assert.equal(host.received.length,2);
+});
+
+test('429 Retry-After countdown retries the exact multipart bytes and clears waiting state on success',async t=>{
+ const times=[],progress=[];
+ const host=await server(t,(_,res)=>{times.push(Date.now());if(times.length===1){res.statusCode=429;res.setHeader('Retry-After','2');res.end('private-limit-detail');}else json(res,{url:'https://images.example/retried'});});
+ assert.equal(await upload(asset,{uploadUrl:host.url,ttl:'3h'},'secret-token',undefined,{onProgress:p=>progress.push(p)}),'https://images.example/retried');
+ assert.equal(times.length,2);assert.ok(times[1]-times[0]>=1950);
+ const waiting=progress.filter(p=>p.state==='retrying');assert.ok(waiting.length>=2);assert.equal(waiting[0].retry,1);assert.equal(waiting[0].maxRetries,3);assert.ok(waiting[0].retryAfterMs>waiting[1].retryAfterMs);
+ assert.equal(progress.at(-1).state,'uploading');assert.equal(progress.at(-1).attempt,2);
+ for(const request of host.received){assert.equal(request.headers.authorization,'Bearer secret-token');assert.equal(request.path,'/upload?ttl=3h');assert.deepEqual(Buffer.from(await request.form.get('file').arrayBuffer()),asset.bytes);}
+ assert.doesNotMatch(JSON.stringify(progress),/secret-token|private-limit-detail/);
+});
+
+test('Qiniu retries 429 using the same generated object key and keeps its multipart credentials',async t=>{
+ const host=await server(t,(request,res)=>{if(host.received.length===1){res.statusCode=429;res.setHeader('Retry-After','0');res.end();}else json(res,{key:request.form.get('key')});});
+ const config={imageHostProvider:'qiniu',uploadUrl:host.url,publicBaseUrl:'https://cdn.example',qiniuKeyPrefix:'articles'};
+ await upload(asset,config,'scoped-token');assert.equal(host.received.length,2);
+ assert.equal(host.received[0].form.get('key'),host.received[1].form.get('key'));
+ for(const request of host.received){assert.equal(request.form.get('token'),'scoped-token');assert.deepEqual(Buffer.from(await request.form.get('file').arrayBuffer()),asset.bytes);}
+});
+
+test('429 retries stop after four attempts or a long server wait, with no credential blame or response disclosure',async t=>{
+ for(const retryAfter of ['0','120']){
+  const host=await server(t,(_,res)=>{res.statusCode=429;res.setHeader('Retry-After',retryAfter);res.end('secret-server-detail');});
+  await assert.rejects(upload(asset,{uploadUrl:host.url},'private-token'),error=>{
+   assert.equal(error.code,'UPLOAD_RATE_LIMITED');assert.equal(error.status,429);assert.equal(error.attempts,retryAfter==='0'?4:1);assert.match(error.message,/429.*|限流/);assert.doesNotMatch(error.message,/credential|Token|图床设置|private-token|secret-server-detail/);return true;
+  });
+  assert.equal(host.received.length,retryAfter==='0'?4:1);
+ }
+});
+
+test('cancelling a 429 wait sends no retry and immediately releases the Piper queue',async t=>{
+ const controller=new AbortController(),progress=[];
+ const host=await server(t,(_,res)=>{if(host.received.length===1){res.statusCode=429;res.setHeader('Retry-After','10');res.end();}else json(res,{url:'https://images.example/next'});});
+ const started=Date.now();await assert.rejects(upload(asset,{uploadUrl:host.url},'token',controller.signal,{onProgress:p=>{progress.push(p);if(p.state==='retrying')controller.abort();}}),{name:'AbortError'});
+ assert.ok(Date.now()-started<1000);assert.equal(host.received.length,1);
+ assert.equal(await upload(asset,{uploadUrl:host.url},'token'),'https://images.example/next');assert.equal(host.received.length,2);assert.equal(progress.filter(p=>p.state==='retrying').length,1);
+});
+
+test('network and 5xx failures are not replayed; authentication and capacity errors have distinct hints',async t=>{
+ for(const status of [401,403,500,502,503,507]){
+  const host=await server(t,(_,res)=>{res.statusCode=status;res.end('private response body');});
+  await assert.rejects(upload(asset,{uploadUrl:host.url},'token'),error=>{
+   assert.equal(error.status,status);assert.doesNotMatch(error.message,/private response body/);
+   if(status===401||status===403)assert.match(error.message,/credential/);else assert.doesNotMatch(error.message,/credential|Token/);
+   if(status===507)assert.match(error.message,/容量已满/);return true;
+  });assert.equal(host.received.length,1);
+ }
+ const dropped=await server(t,(_,res)=>res.destroy());await assert.rejects(upload(asset,{uploadUrl:dropped.url},'token'));assert.equal(dropped.received.length,1);
+});

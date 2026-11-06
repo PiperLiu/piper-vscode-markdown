@@ -136,7 +136,23 @@ async function render(markdown,{filename,root=path.dirname(filename),fontSize=16
  const entries=[...unique.values()];let next=0,completed=0;const urls=[];
  if(resolveAsset)onProgress?.({phase:'upload',completed:0,total:entries.length});
  const controller=new AbortController(),combined=signal?AbortSignal.any([signal,controller.signal]):controller.signal;
- async function consume(){while(next<entries.length){combined.throwIfAborted();const entry=entries[next++];try{const url=resolveAsset?await resolveAsset(entry.asset,combined):`data:${entry.asset.mime};base64,${entry.asset.bytes.toString('base64')}`;combined.throwIfAborted();if(resolveAsset)safeURL(url);urls[entry.index]=url;completed++;if(resolveAsset)onProgress?.({phase:'upload',completed,total:entries.length});}catch(error){controller.abort(error);throw error;}}}
+ // Retry/wait details retain the number of successful images, so waiting
+ // never advances the progress bar or exposes a partially completed result.
+ const uploadProgress=detail=>{
+  if(combined.aborted)return;
+  const position=`Uploading image ${completed+1}/${entries.length} / 正在上传第 ${completed+1}/${entries.length} 张`;
+  onProgress?.({...detail,phase:'upload',completed,total:entries.length,message:position+(detail.message?' — '+detail.message:'')});
+ };
+ async function consume(){
+  while(next<entries.length){
+   combined.throwIfAborted();const entry=entries[next++];
+   try{
+    const url=resolveAsset?await resolveAsset(entry.asset,combined,{onProgress:uploadProgress}):`data:${entry.asset.mime};base64,${entry.asset.bytes.toString('base64')}`;
+    combined.throwIfAborted();if(resolveAsset)safeURL(url);urls[entry.index]=url;completed++;
+    if(resolveAsset)onProgress?.({phase:'upload',completed,total:entries.length});
+   }catch(error){controller.abort(error);throw error;}
+  }
+ }
  const jobs=Array.from({length:Math.min(resolveAsset?3:1,entries.length)},()=>consume());const settled=await Promise.allSettled(jobs);const error=settled.find(item=>item.status==='rejected');if(error)throw error.reason;signal?.throwIfAborted();
  result.$('img').each((_,node)=>{const image=result.$(node),src=image.attr('src')||'';if(src.startsWith('piper-asset:'))image.attr('src',urls[Number(src.slice(12))]);});
  if(!preview){result.$('[data-source-line]').removeAttr('data-source-line');const targets=new Set(result.$('a[href^="#"]').toArray().map(a=>result.$(a).attr('href').slice(1)));result.$('h1,h2,h3,h4,h5,h6').each((_,heading)=>{const node=result.$(heading);if(!targets.has(node.attr('id')))node.removeAttr('id');});}

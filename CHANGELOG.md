@@ -4,6 +4,12 @@
 
 ## English
 
+### 0.4.1
+
+- Queue and pace Piper uploads to work with resource-limited image hosts. Retry explicit HTTP 429 responses within a bounded budget while respecting Retry-After; keep every wait cancellable.
+- Show image counts, queue status, retry attempts, and a live wait countdown in both reading and WeChat previews. Preserve the clipboard when uploading fails or is cancelled.
+- Distinguish rate limits, credentials, and capacity errors with actionable messages.
+
 ### 0.4.0
 
 - Integrate publishing into the existing MPE preview: a lightweight Publish menu switches between enhanced reading and WeChat layout in the same panel, retaining the upstream reader and advanced features.
@@ -37,6 +43,12 @@
 - Publish the initial macOS Apple Silicon package.
 
 ## 中文
+
+### 0.4.1
+
+- Piper 图床上传改为排队并控制发送节奏，兼容资源受限的服务。仅对明确的 HTTP 429 进行有界重试，遵守 Retry-After，等待期间始终可取消。
+- 阅读与公众号预览均显示图片数量、排队状态、重试次数和实时等待倒计时；上传失败或取消时保留原剪贴板。
+- 区分限流、凭据和容量错误，给出对应操作提示。
 
 ### 0.4.0
 

@@ -378,7 +378,7 @@ export async function parseEnhanced(
   notebook.previewScriptsEnabled = false;
   notebook.md.set({ html: false });
   const fence = notebook.md.renderer.rules.fence!;
-  notebook.md.renderer.rules.fence = (
+  const publishingFence: NonNullable<MarkdownIt['renderer']['rules']['fence']> = (
     tokens,
     index,
     mdOptions,
@@ -388,6 +388,7 @@ export async function parseEnhanced(
     inspect('```' + tokens[index].info + '\n```');
     return fence(tokens, index, mdOptions, env, renderer);
   };
+  notebook.md.renderer.rules.fence = publishingFence;
   const engine = new MarkdownEngine({ notebook, filePath: source });
   options.signal?.throwIfAborted();
   const result = await engine.parseMD(snapshot, {

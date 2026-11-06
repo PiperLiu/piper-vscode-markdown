@@ -74,3 +74,17 @@ test('real enhanced parser preserves TOC options, Graphviz, imports and local li
  assert.equal((imported.html.match(/class="article-toc"/g)||[]).length,1);assert.match(imported.html,/<ol/);assert.doesNotMatch(imported.html,/CROSSNOTETOC|final-line end-of-document|data-piper-toc-options/);
 
 });
+
+
+test('upload retry progress retains successful image counts and never advances completion during waiting',async()=>{
+ const progress=[];
+ const out=await render('$x$ $y$',{filename:__filename,onProgress:p=>progress.push(p),resolveAsset:async(_,signal,{onProgress})=>{
+  onProgress({state:'retrying',retry:1,maxRetries:3,retryAfterMs:2000,message:'Retry in 2s'});
+  await new Promise(resolve=>setTimeout(resolve,5));signal.throwIfAborted();
+  onProgress({state:'uploading',attempt:2});return 'https://images.example/ok';
+ }});
+ assert.equal(out.uniqueAssets,2);
+ const waiting=progress.filter(p=>p.state==='retrying');assert.equal(waiting.length,2);
+ for(const p of waiting){assert.equal(p.phase,'upload');assert.equal(p.total,2);assert.equal(p.completed,0);assert.match(p.message,/1\/2.*Retry in 2s/);assert.equal(p.retry,1);}
+ assert.equal(progress.filter(p=>p.phase==='upload').at(-1).completed,2);
+});

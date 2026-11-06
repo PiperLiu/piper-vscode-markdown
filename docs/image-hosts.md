@@ -4,7 +4,7 @@
 
 ## English
 
-This guide covers Piper Markdown 0.4.0 image-host connections. Setup and credential actions are available from the preview’s publishing menu.
+This guide covers Piper Markdown 0.4.1 image-host connections. Setup and credential actions are available from the preview’s publishing menu.
 
 ### Connections and credentials
 
@@ -115,6 +115,7 @@ Token expiry limits new uploads; bucket lifecycle rules determine how long uploa
 
 Images should be publicly readable through HTTPS, without authentication, with GET/HEAD and appropriate browser-editor CORS responses such as `Access-Control-Allow-Origin: *`. Read and upload origins may differ. Loopback HTTP is allowed only for local Piper/Generic development; Qiniu public URLs require HTTPS. Upload redirects are rejected.
 
+- `429`: the host is busy or rate-limiting requests. Piper queues its own uploads and retries explicit 429 responses with a visible countdown when the wait fits its retry budget. A longer Retry-After is shown as a wait instruction. You do not need to reset credentials for 429.
 - `401/403`: recheck credentials for the selected connection; for Qiniu, also check region, deadline, bucket, and permitted key prefix.
 - Successful upload without a usable URL: correct the nested `urlField`; Qiniu needs a response `key`.
 - Image `403/404`: check domain/path mapping, public access, HTTPS, CORS, and hotlink-protection rules.
@@ -124,7 +125,7 @@ Previewing does not upload local images. Successful copy confirms resource proce
 
 ## 中文
 
-本页说明 Piper Markdown 0.4.0 的图床连接。预览中的发布菜单提供配置与凭据操作。
+本页说明 Piper Markdown 0.4.1 的图床连接。预览中的发布菜单提供配置与凭据操作。
 
 ### 连接与凭据
 
@@ -246,6 +247,7 @@ Token 来自 SecretStorage，作为单独 multipart 字段发送。服务无需�
 - 图片应通过公共 HTTPS URL 匿名访问，支持 GET/HEAD，并为浏览器编辑器设置适当跨域响应，例如 `Access-Control-Allow-Origin: *`。上传地址和读取地址可以不同。
 - 只为本地开发保留 Piper/Generic 回环 HTTP 支持；七牛 `publicBaseUrl` 始终要求 HTTPS。上传重定向会被拒绝。
 - `401/403`：检查当前连接是否重新设置了凭据；七牛还需核对区域、凭证有效期、Bucket 与对象名前缀。
+- `429`：图床繁忙或上传过于频繁。Piper 会将自己的上传排队，在允许的重试预算内遵循 `Retry-After`，并显示重试倒计时；服务端要求等待更久时，会提示等待后再试。429 不需要重新设置凭据。
 - 上传成功却没有 URL：检查 `urlField` 是否匹配真实 JSON；七牛响应必须含 `key`。
 - 图片 URL 返回 `403/404`：检查域名与路径映射、对象是否公开、HTTPS、跨域和防盗链设置。
 - 图片自动过期：检查图床或空间生命周期；不要把 Token 过期和图片过期混为一谈。
