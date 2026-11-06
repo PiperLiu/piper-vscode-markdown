@@ -1,0 +1,1162 @@
+{
+  "name": "piper-markdown-review",
+  "displayName": "Piper Markdown",
+  "description": "Enhanced Markdown preview, HTML/PDF export, TOC, diagrams, and optional WeChat rich-text publishing.",
+  "version": "0.3.0",
+  "publisher": "piperliu",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "main": "./src/main.js",
+  "extensionKind": [
+    "ui"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "piperMarkdown.preview",
+        "title": "Piper Markdown: Open Enhanced Preview",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "piperMarkdown.copy",
+        "title": "Piper Markdown: Copy for WeChat",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "piperMarkdown.previewWechat",
+        "title": "Piper Markdown: Preview WeChat Layout"
+      },
+      {
+        "command": "piperMarkdown.exportHTML",
+        "title": "Piper Markdown: Export HTML"
+      },
+      {
+        "command": "piperMarkdown.exportPDF",
+        "title": "Piper Markdown: Export PDF"
+      },
+      {
+        "command": "piperMarkdown.insertTOC",
+        "title": "Piper Markdown: Insert Table of Contents"
+      },
+      {
+        "command": "piperMarkdown.exportWechatHTML",
+        "title": "Piper Markdown: Export WeChat HTML"
+      },
+      {
+        "command": "piperMarkdown.openMPE",
+        "title": "Piper Markdown: Open Enhanced Preview (Compatibility)"
+      },
+      {
+        "command": "piperMarkdown.setToken",
+        "title": "Piper Markdown: Set Image Upload Token"
+      },
+      {
+        "command": "piperMarkdown.clearToken",
+        "title": "Piper Markdown: Clear Image Upload Token"
+      },
+      {
+        "command": "piperMarkdown.enhanced.openGraphView",
+        "title": "%piperMarkdown.enhanced.openGraphView.title%",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "piperMarkdown.enhanced.openPreviewToTheSide",
+        "title": "%piperMarkdown.enhanced.openPreviewToTheSide.title%",
+        "icon": {
+          "light": "./vendor/mpe/media/preview-right-light.svg",
+          "dark": "./vendor/mpe/media/preview-right-dark.svg"
+        }
+      },
+      {
+        "command": "piperMarkdown.enhanced.openPreview",
+        "title": "%piperMarkdown.enhanced.openPreview.title%",
+        "icon": {
+          "light": "./vendor/mpe/media/preview-right-light.svg",
+          "dark": "./vendor/mpe/media/preview-right-dark.svg"
+        }
+      },
+      {
+        "command": "piperMarkdown.enhanced.openLockedPreviewToTheSide",
+        "title": "%piperMarkdown.enhanced.openLockedPreviewToTheSide.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.togglePreviewLock",
+        "title": "%piperMarkdown.enhanced.togglePreviewLock.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.copyBlockReference",
+        "title": "%piperMarkdown.enhanced.copyBlockReference.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.copyCurrentSourceRelativePath",
+        "title": "%piperMarkdown.enhanced.copyCurrentSourceRelativePath.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.copyCurrentSourcePath",
+        "title": "%piperMarkdown.enhanced.copyCurrentSourcePath.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.openCurrentSourceInEditor",
+        "title": "%piperMarkdown.enhanced.openCurrentSourceInEditor.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.openCurrentSourceInEditorAndClosePreview",
+        "title": "%piperMarkdown.enhanced.openCurrentSourceInEditorAndClosePreview.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.toggleScrollSync",
+        "title": "%piperMarkdown.enhanced.toggleScrollSync.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.toggleLiveUpdate",
+        "title": "%piperMarkdown.enhanced.toggleLiveUpdate.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.toggleBreakOnSingleNewLine",
+        "title": "%piperMarkdown.enhanced.toggleBreakOnSingleNewLine.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.openImageHelper",
+        "title": "%piperMarkdown.enhanced.openImageHelper.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.runAllCodeChunks",
+        "title": "%piperMarkdown.enhanced.runAllCodeChunks.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.runCodeChunk",
+        "title": "%piperMarkdown.enhanced.runCodeChunk.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.syncPreview",
+        "title": "%piperMarkdown.enhanced.syncPreview.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.customizeCss",
+        "title": "%piperMarkdown.enhanced.customizeCss.title%",
+        "enablement": "!isWeb"
+      },
+      {
+        "command": "piperMarkdown.enhanced.customizeCssInWorkspace",
+        "title": "%piperMarkdown.enhanced.customizeCssInWorkspace.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.insertNewSlide",
+        "title": "%piperMarkdown.enhanced.insertNewSlide.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.insertTable",
+        "title": "%piperMarkdown.enhanced.insertTable.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.insertPagebreak",
+        "title": "%piperMarkdown.enhanced.insertPagebreak.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.createTOC",
+        "title": "%piperMarkdown.enhanced.createTOC.title%",
+        "enablement": "!isWeb"
+      },
+      {
+        "command": "piperMarkdown.enhanced.openConfigScript",
+        "title": "%piperMarkdown.enhanced.openConfigScript.title%",
+        "enablement": "!isWeb"
+      },
+      {
+        "command": "piperMarkdown.enhanced.extendParser",
+        "title": "%piperMarkdown.enhanced.extendParser.title%",
+        "enablement": "!isWeb"
+      },
+      {
+        "command": "piperMarkdown.enhanced.customizePreviewHtmlHead",
+        "title": "%piperMarkdown.enhanced.customizePreviewHtmlHead.title%",
+        "enablement": "!isWeb"
+      },
+      {
+        "command": "piperMarkdown.enhanced.openConfigScriptInWorkspace",
+        "title": "%piperMarkdown.enhanced.openConfigScriptInWorkspace.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.extendParserInWorkspace",
+        "title": "%piperMarkdown.enhanced.extendParserInWorkspace.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.customizePreviewHtmlHeadInWorkspace",
+        "title": "%piperMarkdown.enhanced.customizePreviewHtmlHeadInWorkspace.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.showUploadedImages",
+        "title": "%piperMarkdown.enhanced.showUploadedImages.title%",
+        "enablement": "!isWeb"
+      },
+      {
+        "command": "piperMarkdown.enhanced.setAiTranslationApiKey",
+        "title": "%piperMarkdown.enhanced.setAiTranslationApiKey.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.translateNow",
+        "title": "%piperMarkdown.enhanced.translateNow.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.showOriginalTranslation",
+        "title": "%piperMarkdown.enhanced.showOriginalTranslation.title%"
+      },
+      {
+        "command": "piperMarkdown.enhanced.startCrossnoteServer",
+        "title": "%piperMarkdown.enhanced.startCrossnoteServer.title%",
+        "enablement": "!isWeb"
+      },
+      {
+        "command": "piperMarkdown.enhanced.stopCrossnoteServer",
+        "title": "%piperMarkdown.enhanced.stopCrossnoteServer.title%",
+        "enablement": "piperMarkdown.enhanced.crossnoteServerRunning && !isWeb"
+      },
+      {
+        "command": "piperMarkdown.enhanced.buildStandaloneWiki",
+        "title": "%piperMarkdown.enhanced.buildStandaloneWiki.title%",
+        "enablement": "!isWeb"
+      },
+      {
+        "command": "piperMarkdown.enhanced.applyDefaultEditor",
+        "title": "%piperMarkdown.enhanced.applyDefaultEditor.title%"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "Piper Markdown — WeChat publishing",
+        "properties": {
+          "piperMarkdown.uploadUrl": {
+            "type": "string",
+            "default": "",
+            "scope": "machine",
+            "description": "Multipart upload endpoint, e.g. https://images.example/api/public-images. HTTP is allowed only for loopback addresses."
+          },
+          "piperMarkdown.ttl": {
+            "type": "string",
+            "default": "24h",
+            "enum": [
+              "3h",
+              "24h"
+            ],
+            "description": "Temporary image lifetime. Confirm that WeChat has stored the images before expiry."
+          },
+          "piperMarkdown.fileField": {
+            "type": "string",
+            "default": "file",
+            "description": "Multipart file field for the image host."
+          },
+          "piperMarkdown.urlField": {
+            "type": "string",
+            "default": "url",
+            "description": "Image URL field in the upload response; dotted paths such as data.url are supported."
+          },
+          "piperMarkdown.fontSize": {
+            "type": "number",
+            "default": 16,
+            "minimum": 12,
+            "maximum": 24,
+            "description": "WeChat body font size in pixels."
+          },
+          "piperMarkdown.previewWidth": {
+            "type": "number",
+            "default": 760,
+            "minimum": 480,
+            "maximum": 1200,
+            "description": "Maximum content width of the WeChat layout preview in pixels."
+          },
+          "piperMarkdown.scrollSync": {
+            "type": "boolean",
+            "default": true,
+            "description": "Synchronize the WeChat layout preview and its source editor."
+          },
+          "piperWechat.uploadUrl": {
+            "type": "string",
+            "default": "",
+            "scope": "machine",
+            "description": "Multipart upload endpoint, e.g. https://images.example/api/public-images. HTTP is allowed only for loopback addresses.",
+            "deprecationMessage": "Use piperMarkdown.uploadUrl; explicit legacy values remain a fallback."
+          },
+          "piperWechat.ttl": {
+            "type": "string",
+            "default": "24h",
+            "enum": [
+              "3h",
+              "24h"
+            ],
+            "description": "Temporary image lifetime. Confirm that WeChat has stored the images before expiry.",
+            "deprecationMessage": "Use piperMarkdown.ttl; explicit legacy values remain a fallback."
+          },
+          "piperWechat.fileField": {
+            "type": "string",
+            "default": "file",
+            "description": "Multipart file field for the image host.",
+            "deprecationMessage": "Use piperMarkdown.fileField; explicit legacy values remain a fallback."
+          },
+          "piperWechat.urlField": {
+            "type": "string",
+            "default": "url",
+            "description": "Image URL field in the upload response; dotted paths such as data.url are supported.",
+            "deprecationMessage": "Use piperMarkdown.urlField; explicit legacy values remain a fallback."
+          },
+          "piperWechat.fontSize": {
+            "type": "number",
+            "default": 16,
+            "minimum": 12,
+            "maximum": 24,
+            "description": "WeChat body font size in pixels.",
+            "deprecationMessage": "Use piperMarkdown.fontSize; explicit legacy values remain a fallback."
+          }
+        }
+      },
+      {
+        "type": "object",
+        "title": "Markdown Preview Enhanced",
+        "properties": {
+          "piperMarkdown.enhanced.crossnoteServePort": {
+            "description": "%piperMarkdown.enhanced.crossnoteServePort.description%",
+            "default": 3000,
+            "type": "number",
+            "minimum": 0,
+            "maximum": 65535
+          },
+          "piperMarkdown.enhanced.configPath": {
+            "markdownDescription": "%piperMarkdown.enhanced.configPath.markdownDescription%",
+            "default": "",
+            "type": "string",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.markdownParser": {
+            "description": "%piperMarkdown.enhanced.markdownParser.description%",
+            "default": "markdown-it",
+            "type": "string",
+            "enum": [
+              "markdown-it",
+              "pandoc",
+              "markdown_yo"
+            ],
+            "enumDescriptions": [
+              "%piperMarkdown.enhanced.markdownParser.enumDescriptions.0%",
+              "%piperMarkdown.enhanced.markdownParser.enumDescriptions.1%",
+              "%piperMarkdown.enhanced.markdownParser.enumDescriptions.2%"
+            ]
+          },
+          "piperMarkdown.enhanced.breakOnSingleNewLine": {
+            "description": "%piperMarkdown.enhanced.breakOnSingleNewLine.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.scrollSync": {
+            "description": "%piperMarkdown.enhanced.scrollSync.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.liveUpdate": {
+            "description": "%piperMarkdown.enhanced.liveUpdate.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.liveUpdateDebounceMs": {
+            "description": "%piperMarkdown.enhanced.liveUpdateDebounceMs.description%",
+            "default": 300,
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5000
+          },
+          "piperMarkdown.enhanced.previewMode": {
+            "markdownDescription": "%piperMarkdown.enhanced.previewMode.markdownDescription%",
+            "type": "string",
+            "enum": [
+              "Single Preview",
+              "Multiple Previews",
+              "Previews Only"
+            ],
+            "default": "Single Preview"
+          },
+          "piperMarkdown.enhanced.automaticallyShowPreviewOfMarkdownBeingEdited": {
+            "description": "%piperMarkdown.enhanced.automaticallyShowPreviewOfMarkdownBeingEdited.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.disableAutoPreviewForUriSchemes": {
+            "markdownDescription": "%piperMarkdown.enhanced.disableAutoPreviewForUriSchemes.markdownDescription%",
+            "default": [
+              "vscode-notebook-cell"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "piperMarkdown.enhanced.disableAutoPreviewForFilePatterns": {
+            "markdownDescription": "%piperMarkdown.enhanced.disableAutoPreviewForFilePatterns.markdownDescription%",
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "piperMarkdown.enhanced.previewColorScheme": {
+            "type": "string",
+            "enum": [
+              "selectedPreviewTheme",
+              "systemColorScheme",
+              "editorColorScheme"
+            ],
+            "default": "selectedPreviewTheme",
+            "markdownEnumDescriptions": [
+              "%piperMarkdown.enhanced.previewColorScheme.markdownEnumDescriptions.0%",
+              "%piperMarkdown.enhanced.previewColorScheme.markdownEnumDescriptions.1%",
+              "%piperMarkdown.enhanced.previewColorScheme.markdownEnumDescriptions.2%"
+            ]
+          },
+          "piperMarkdown.enhanced.enableTypographer": {
+            "description": "%piperMarkdown.enhanced.enableTypographer.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.mathRenderingOption": {
+            "description": "%piperMarkdown.enhanced.mathRenderingOption.description%",
+            "default": "KaTeX",
+            "type": "string",
+            "enum": [
+              "KaTeX",
+              "MathJax",
+              "None"
+            ]
+          },
+          "piperMarkdown.enhanced.mathInlineDelimiters": {
+            "description": "%piperMarkdown.enhanced.mathInlineDelimiters.description%",
+            "default": [
+              [
+                "$",
+                "$"
+              ],
+              [
+                "\\(",
+                "\\)"
+              ]
+            ],
+            "type": "array"
+          },
+          "piperMarkdown.enhanced.mathBlockDelimiters": {
+            "description": "%piperMarkdown.enhanced.mathBlockDelimiters.description%",
+            "default": [
+              [
+                "$$",
+                "$$"
+              ],
+              [
+                "\\[",
+                "\\]"
+              ]
+            ],
+            "type": "array"
+          },
+          "piperMarkdown.enhanced.mathRenderingOnlineService": {
+            "description": "%piperMarkdown.enhanced.mathRenderingOnlineService.description%",
+            "default": "https://latex.codecogs.com/gif.latex",
+            "type": "string",
+            "enum": [
+              "https://latex.codecogs.com/gif.latex",
+              "https://latex.codecogs.com/svg.latex",
+              "https://latex.codecogs.com/png.latex"
+            ]
+          },
+          "piperMarkdown.enhanced.mathjaxScriptSrc": {
+            "description": "%piperMarkdown.enhanced.mathjaxScriptSrc.description%",
+            "default": "https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.mathjaxV3ScriptSrc": {
+            "markdownDeprecationMessage": "This setting has been renamed to `#piperMarkdown.enhanced.mathjaxScriptSrc#` and the default now loads MathJax v4. Please move your value to the new setting.",
+            "deprecationMessage": "This setting has been renamed to piperMarkdown.enhanced.mathjaxScriptSrc and the default now loads MathJax v4. Please move your value to the new setting.",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.enableWikiLinkSyntax": {
+            "description": "%piperMarkdown.enhanced.enableWikiLinkSyntax.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.enableLinkify": {
+            "description": "%piperMarkdown.enhanced.enableLinkify.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.useGitHubStylePipedLink": {
+            "description": "%piperMarkdown.enhanced.useGitHubStylePipedLink.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.enableEmojiSyntax": {
+            "description": "%piperMarkdown.enhanced.enableEmojiSyntax.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.enableExtendedTableSyntax": {
+            "description": "%piperMarkdown.enhanced.enableExtendedTableSyntax.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.enableCriticMarkupSyntax": {
+            "description": "%piperMarkdown.enhanced.enableCriticMarkupSyntax.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.enableTagSyntax": {
+            "description": "%piperMarkdown.enhanced.enableTagSyntax.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.maxNoteFileSize": {
+            "markdownDescription": "%piperMarkdown.enhanced.maxNoteFileSize.markdownDescription%",
+            "default": 5242880,
+            "type": "number",
+            "minimum": 0
+          },
+          "piperMarkdown.enhanced.wikiLinkTargetFileExtension": {
+            "markdownDescription": "%piperMarkdown.enhanced.wikiLinkTargetFileExtension.markdownDescription%",
+            "default": ".md",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.wikiLinkResolution": {
+            "markdownDescription": "%piperMarkdown.enhanced.wikiLinkResolution.markdownDescription%",
+            "default": "relative",
+            "type": "string",
+            "enum": [
+              "relative",
+              "shortest",
+              "absolute"
+            ],
+            "enumDescriptions": [
+              "%piperMarkdown.enhanced.wikiLinkResolution.enumDescriptions.0%",
+              "%piperMarkdown.enhanced.wikiLinkResolution.enumDescriptions.1%",
+              "%piperMarkdown.enhanced.wikiLinkResolution.enumDescriptions.2%"
+            ]
+          },
+          "piperMarkdown.enhanced.wikiLinkTargetFileNameChangeCase": {
+            "markdownDescription": "%piperMarkdown.enhanced.wikiLinkTargetFileNameChangeCase.markdownDescription%",
+            "default": "none",
+            "type": "string",
+            "enum": [
+              "none",
+              "camelCase",
+              "pascalCase",
+              "kebabCase",
+              "snakeCase",
+              "constantCase",
+              "trainCase",
+              "adaCase",
+              "cobolCase",
+              "dotNotation",
+              "pathCase",
+              "spaceCase",
+              "capitalCase",
+              "lowerCase",
+              "upperCase"
+            ]
+          },
+          "piperMarkdown.enhanced.frontMatterRenderingOption": {
+            "description": "%piperMarkdown.enhanced.frontMatterRenderingOption.description%",
+            "type": "string",
+            "enum": [
+              "none",
+              "table",
+              "vertical table",
+              "code block"
+            ],
+            "enumDescriptions": [
+              "%piperMarkdown.enhanced.frontMatterRenderingOption.enumDescriptions.0%",
+              "%piperMarkdown.enhanced.frontMatterRenderingOption.enumDescriptions.1%",
+              "%piperMarkdown.enhanced.frontMatterRenderingOption.enumDescriptions.2%",
+              "%piperMarkdown.enhanced.frontMatterRenderingOption.enumDescriptions.3%"
+            ],
+            "default": "none"
+          },
+          "piperMarkdown.enhanced.mermaidTheme": {
+            "description": "%piperMarkdown.enhanced.mermaidTheme.description%",
+            "default": "default",
+            "type": "string",
+            "enum": [
+              "default",
+              "dark",
+              "forest"
+            ]
+          },
+          "piperMarkdown.enhanced.codeBlockTheme": {
+            "description": "%piperMarkdown.enhanced.codeBlockTheme.description%",
+            "default": "auto.css",
+            "type": "string",
+            "enum": [
+              "auto.css",
+              "default.css",
+              "atom-dark.css",
+              "atom-light.css",
+              "atom-material.css",
+              "coy.css",
+              "darcula.css",
+              "dark.css",
+              "funky.css",
+              "github.css",
+              "github-dark.css",
+              "hopscotch.css",
+              "monokai.css",
+              "okaidia.css",
+              "one-dark.css",
+              "one-light.css",
+              "pen-paper-coffee.css",
+              "pojoaque.css",
+              "solarized-dark.css",
+              "solarized-light.css",
+              "twilight.css",
+              "vscode.css",
+              "vs.css",
+              "vue.css",
+              "xonokai.css"
+            ]
+          },
+          "piperMarkdown.enhanced.previewTheme": {
+            "description": "%piperMarkdown.enhanced.previewTheme.description%",
+            "default": "github-light.css",
+            "type": "string",
+            "enum": [
+              "atom-dark.css",
+              "atom-light.css",
+              "atom-material.css",
+              "github-dark.css",
+              "github-light.css",
+              "gothic.css",
+              "medium.css",
+              "monokai.css",
+              "newsprint.css",
+              "night.css",
+              "none.css",
+              "one-dark.css",
+              "one-light.css",
+              "solarized-dark.css",
+              "solarized-light.css",
+              "vscode.css",
+              "vue.css"
+            ],
+            "markdownEnumDescriptions": [
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.0%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.1%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.2%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.3%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.4%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.5%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.6%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.7%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.8%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.9%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.10%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.11%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.12%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.13%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.14%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.15%",
+              "%piperMarkdown.enhanced.previewTheme.markdownEnumDescriptions.16%"
+            ]
+          },
+          "piperMarkdown.enhanced.revealjsTheme": {
+            "description": "%piperMarkdown.enhanced.revealjsTheme.description%",
+            "default": "white.css",
+            "type": "string",
+            "enum": [
+              "beige.css",
+              "black.css",
+              "blood.css",
+              "league.css",
+              "moon.css",
+              "night.css",
+              "serif.css",
+              "simple.css",
+              "sky.css",
+              "solarized.css",
+              "vscode.css",
+              "white.css",
+              "none.css"
+            ]
+          },
+          "piperMarkdown.enhanced.protocolsWhiteList": {
+            "description": "%piperMarkdown.enhanced.protocolsWhiteList.description%",
+            "default": "http://, https://, atom://, file://, mailto:, tel:",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.imageFolderPath": {
+            "description": "%piperMarkdown.enhanced.imageFolderPath.description%",
+            "default": "/assets",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.imageUploader": {
+            "description": "%piperMarkdown.enhanced.imageUploader.description%",
+            "default": "imgur",
+            "type": "string",
+            "enum": [
+              "imgur",
+              "sm.ms",
+              "qiniu"
+            ]
+          },
+          "piperMarkdown.enhanced.qiniuAccessKey": {
+            "type": "string",
+            "default": "",
+            "description": "%piperMarkdown.enhanced.qiniuAccessKey.description%"
+          },
+          "piperMarkdown.enhanced.qiniuSecretKey": {
+            "type": "string",
+            "default": "",
+            "description": "%piperMarkdown.enhanced.qiniuSecretKey.description%"
+          },
+          "piperMarkdown.enhanced.qiniuBucket": {
+            "type": "string",
+            "default": "",
+            "description": "%piperMarkdown.enhanced.qiniuBucket.description%"
+          },
+          "piperMarkdown.enhanced.qiniuDomain": {
+            "type": "string",
+            "default": "http://",
+            "description": "%piperMarkdown.enhanced.qiniuDomain.description%"
+          },
+          "piperMarkdown.enhanced.printBackground": {
+            "description": "%piperMarkdown.enhanced.printBackground.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.exportColorScheme": {
+            "type": "string",
+            "enum": [
+              "theme",
+              "auto"
+            ],
+            "default": "theme",
+            "markdownEnumDescriptions": [
+              "%piperMarkdown.enhanced.exportColorScheme.markdownEnumDescriptions.0%",
+              "%piperMarkdown.enhanced.exportColorScheme.markdownEnumDescriptions.1%"
+            ]
+          },
+          "piperMarkdown.enhanced.chromePath": {
+            "description": "%piperMarkdown.enhanced.chromePath.description%",
+            "default": "",
+            "type": "string",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.imageMagickPath": {
+            "description": "%piperMarkdown.enhanced.imageMagickPath.description%",
+            "default": "",
+            "type": "string",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.pandocPath": {
+            "description": "%piperMarkdown.enhanced.pandocPath.description%",
+            "default": "pandoc",
+            "type": "string",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.markdownYoBinaryPath": {
+            "description": "%piperMarkdown.enhanced.markdownYoBinaryPath.description%",
+            "default": "",
+            "type": "string",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.pandocMarkdownFlavor": {
+            "description": "%piperMarkdown.enhanced.pandocMarkdownFlavor.description%",
+            "default": "markdown-raw_tex+tex_math_single_backslash",
+            "type": "string",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.pandocArguments": {
+            "description": "%piperMarkdown.enhanced.pandocArguments.description%",
+            "default": [],
+            "type": "array",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.latexEngine": {
+            "description": "%piperMarkdown.enhanced.latexEngine.description%",
+            "default": "pdflatex",
+            "type": "string",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.enableScriptExecution": {
+            "description": "%piperMarkdown.enhanced.enableScriptExecution.description%",
+            "default": false,
+            "type": "boolean",
+            "scope": "application"
+          },
+          "piperMarkdown.enhanced.enablePreviewScripts": {
+            "description": "%piperMarkdown.enhanced.enablePreviewScripts.description%",
+            "scope": "application",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.enableHTML5Embed": {
+            "description": "%piperMarkdown.enhanced.enableHTML5Embed.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.HTML5EmbedUseImageSyntax": {
+            "description": "%piperMarkdown.enhanced.HTML5EmbedUseImageSyntax.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.HTML5EmbedUseLinkSyntax": {
+            "description": "%piperMarkdown.enhanced.HTML5EmbedUseLinkSyntax.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.HTML5EmbedIsAllowedHttp": {
+            "description": "%piperMarkdown.enhanced.HTML5EmbedIsAllowedHttp.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.HTML5EmbedAudioAttributes": {
+            "description": "%piperMarkdown.enhanced.HTML5EmbedAudioAttributes.description%",
+            "default": "controls preload=\"metadata\" width=\"320\"",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.HTML5EmbedVideoAttributes": {
+            "description": "%piperMarkdown.enhanced.HTML5EmbedVideoAttributes.description%",
+            "default": "controls preload=\"metadata\" width=\"320\" height=\"240\"",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.puppeteerWaitForTimeout": {
+            "description": "%piperMarkdown.enhanced.puppeteerWaitForTimeout.description%",
+            "default": 0,
+            "type": "number"
+          },
+          "piperMarkdown.enhanced.puppeteerArgs": {
+            "description": "%piperMarkdown.enhanced.puppeteerArgs.description%",
+            "default": [],
+            "type": "array",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.plantumlServer": {
+            "description": "%piperMarkdown.enhanced.plantumlServer.description%",
+            "default": "",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.hideDefaultVSCodeMarkdownPreviewButtons": {
+            "description": "%piperMarkdown.enhanced.hideDefaultVSCodeMarkdownPreviewButtons.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.jsdelivrCdnHost": {
+            "markdownDescription": "%piperMarkdown.enhanced.jsdelivrCdnHost.markdownDescription%",
+            "default": "cdn.jsdelivr.net",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.plantumlJarPath": {
+            "description": "%piperMarkdown.enhanced.plantumlJarPath.description%",
+            "default": "",
+            "type": "string",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.krokiServer": {
+            "description": "%piperMarkdown.enhanced.krokiServer.description%",
+            "default": "https://kroki.io",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.webSequenceDiagramsServer": {
+            "description": "%piperMarkdown.enhanced.webSequenceDiagramsServer.description%",
+            "default": "https://www.websequencediagrams.com",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.webSequenceDiagramsApiKey": {
+            "description": "%piperMarkdown.enhanced.webSequenceDiagramsApiKey.description%",
+            "default": "",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.d2Path": {
+            "description": "%piperMarkdown.enhanced.d2Path.description%",
+            "default": "d2",
+            "type": "string",
+            "scope": "machine"
+          },
+          "piperMarkdown.enhanced.d2Layout": {
+            "description": "%piperMarkdown.enhanced.d2Layout.description%",
+            "default": "dagre",
+            "type": "string",
+            "enum": [
+              "dagre",
+              "elk",
+              "tala"
+            ]
+          },
+          "piperMarkdown.enhanced.d2Theme": {
+            "description": "%piperMarkdown.enhanced.d2Theme.description%",
+            "default": 0,
+            "type": "number",
+            "enum": [
+              0,
+              1,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              100,
+              101,
+              102,
+              103,
+              104,
+              105,
+              200,
+              201,
+              300,
+              301,
+              302,
+              303
+            ],
+            "enumItemLabels": [
+              "Neutral Default",
+              "Neutral Grey",
+              "Flagship Terrastruct",
+              "Cool Classics",
+              "Mixed Berry Blue",
+              "Grape Soda",
+              "Aubergine",
+              "Colorblind Clear",
+              "Vanilla Nitro Cola",
+              "Orange Creamsicle",
+              "Shirley Temple",
+              "Earth Tones",
+              "Everglade Green",
+              "Buttered Toast",
+              "Dark Mauve",
+              "Dark Flagship Terrastruct",
+              "Terminal",
+              "Terminal Grayscale",
+              "Origami",
+              "C4"
+            ]
+          },
+          "piperMarkdown.enhanced.d2Sketch": {
+            "description": "%piperMarkdown.enhanced.d2Sketch.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.markdownFileExtensions": {
+            "description": "%piperMarkdown.enhanced.markdownFileExtensions.description%",
+            "default": [
+              ".md",
+              ".markdown",
+              ".mdown",
+              ".mkdn",
+              ".mkd",
+              ".rmd",
+              ".qmd",
+              ".mdx"
+            ],
+            "type": "array"
+          },
+          "piperMarkdown.enhanced.alwaysShowBacklinksInPreview": {
+            "description": "%piperMarkdown.enhanced.alwaysShowBacklinksInPreview.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.enablePreviewZenMode": {
+            "description": "%piperMarkdown.enhanced.enablePreviewZenMode.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.useVSCodeThemeForContextMenu": {
+            "description": "%piperMarkdown.enhanced.useVSCodeThemeForContextMenu.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.enablePreviewContextMenu": {
+            "description": "%piperMarkdown.enhanced.enablePreviewContextMenu.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.enableImageLightbox": {
+            "description": "%piperMarkdown.enhanced.enableImageLightbox.description%",
+            "default": true,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.aiTranslationProvider": {
+            "description": "%piperMarkdown.enhanced.aiTranslationProvider.description%",
+            "default": "",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.aiTranslationModel": {
+            "description": "%piperMarkdown.enhanced.aiTranslationModel.description%",
+            "default": "",
+            "type": "string"
+          },
+          "piperMarkdown.enhanced.aiTranslationAutoUpdate": {
+            "description": "%piperMarkdown.enhanced.aiTranslationAutoUpdate.description%",
+            "default": false,
+            "type": "boolean"
+          },
+          "piperMarkdown.enhanced.tikzRendererPath": {
+            "type": "string",
+            "default": "",
+            "scope": "machine",
+            "description": "Absolute path to a separately installed node-tikzjax module. User scope only; workspace and Markdown cannot choose an executable. Empty uses ~/.local/share/piper-markdown-tools/node_modules/node-tikzjax. Install manually with npm install --prefix ~/.local/share/piper-markdown-tools node-tikzjax@1.0.5. The extension does not download or include this optional tool."
+          }
+        }
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "piper-markdown-enhanced",
+        "displayName": "%customEditorPreviewDisplayName%",
+        "selector": [
+          {
+            "filenamePattern": "*.{md,markdown,mdown,mkdn,mkd,rmd,qmd}"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "piperMarkdown.enhanced.openPreviewToTheSide",
+        "key": "ctrl+k v",
+        "mac": "cmd+k v",
+        "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/"
+      },
+      {
+        "command": "piperMarkdown.enhanced.openPreview",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/"
+      },
+      {
+        "command": "piperMarkdown.enhanced.openLockedPreviewToTheSide",
+        "key": "ctrl+k shift+l",
+        "mac": "cmd+k shift+l",
+        "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/"
+      },
+      {
+        "command": "piperMarkdown.enhanced.togglePreviewLock",
+        "key": "ctrl+k ctrl+shift+l",
+        "mac": "cmd+k cmd+shift+l",
+        "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/"
+      },
+      {
+        "command": "piperMarkdown.enhanced.runAllCodeChunks",
+        "key": "ctrl+shift+enter",
+        "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/"
+      },
+      {
+        "command": "piperMarkdown.enhanced.runCodeChunk",
+        "key": "shift+enter",
+        "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/"
+      },
+      {
+        "command": "piperMarkdown.enhanced.syncPreview",
+        "key": "ctrl+shift+s",
+        "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "piperMarkdown.enhanced.startCrossnoteServer",
+          "when": "resourceLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/ && !isWeb",
+          "group": "piper-markdown-enhanced"
+        },
+        {
+          "command": "piperMarkdown.enhanced.stopCrossnoteServer",
+          "when": "resourceLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/ && piperMarkdown.enhanced.crossnoteServerRunning && !isWeb",
+          "group": "piper-markdown-enhanced"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "piperMarkdown.enhanced.openPreviewToTheSide",
+          "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/",
+          "group": "piper-markdown-enhanced"
+        },
+        {
+          "command": "piperMarkdown.enhanced.openGraphView",
+          "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/",
+          "group": "piper-markdown-enhanced"
+        },
+        {
+          "command": "piperMarkdown.enhanced.startCrossnoteServer",
+          "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/ && !isWeb",
+          "group": "piper-markdown-enhanced"
+        },
+        {
+          "command": "piperMarkdown.enhanced.stopCrossnoteServer",
+          "when": "editorLangId =~ /^(markdown|quarto|prompt|instructions|chatagent|skill)$/ && piperMarkdown.enhanced.crossnoteServerRunning && !isWeb",
+          "group": "piper-markdown-enhanced"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "piperMarkdown.preview",
+          "when": "editorLangId == markdown",
+          "group": "navigation@1"
+        },
+        {
+          "command": "piperMarkdown.copy",
+          "when": "editorLangId == markdown",
+          "group": "navigation@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "piperMarkdown.openMPE",
+          "when": "false"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:upstream": "pnpm --dir vendor/mpe test",
+    "build:native": "node scripts/build-native.js",
+    "build": "node scripts/build.js",
+    "package": "npm run build && node scripts/package.js",
+    "check": "node --check src/main.js && node --check src/wechat-extension.js && node --check media/preview.js",
+    "sync:manifest": "node scripts/sync-manifest.js"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "2.6.2",
+    "markdown-it": "14.3.3",
+    "mathjax-full": "3.2.2",
+    "highlight.js": "11.11.1",
+    "juice": "11.0.1"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "3.6.0"
+  },
+  "keywords": [
+    "markdown",
+    "preview",
+    "pdf",
+    "mermaid",
+    "wechat"
+  ],
+  "icon": "media/icon.png",
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguage:markdown",
+    "onLanguage:quarto",
+    "onLanguage:prompt",
+    "onLanguage:instructions",
+    "onLanguage:chatagent",
+    "onLanguage:skill",
+    "onCommand:piperWechat.preview",
+    "onCommand:piperWechat.copy",
+    "onCommand:piperWechat.setToken",
+    "onCommand:piperWechat.clearToken"
+  ],
+  "l10n": "./vendor/mpe/l10n"
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "file": "licenses/KaTeX-0.16.47-LICENSE",
+    "url": "https://github.com/KaTeX/KaTeX/blob/v0.16.47/LICENSE",
+    "git_blob_sha": "37c6433e3bedca7a97e08fe35d98582a5f7bac0c"
+  },
+  {
+    "file": "licenses/Reveal-4.6.0-LICENSE",
+    "url": "https://github.com/hakimel/reveal.js/blob/4.6.0/LICENSE",
+    "git_blob_sha": "0de9fddeb39cd667769c48b901516c6c7cf8244b"
+  },
+  {
+    "file": "licenses/Vega-5.25.0-LICENSE",
+    "url": "https://github.com/vega/vega/blob/v5.25.0/LICENSE",
+    "git_blob_sha": "eb5c50a9300fa45ff5ec16332f16ae49e74b742f"
+  },
+  {
+    "file": "licenses/Vega-Lite-5.16.1-LICENSE",
+    "url": "https://github.com/vega/vega-lite/blob/v5.16.1/LICENSE",
+    "git_blob_sha": "850162439caa666a0761260bc6b7ecbc25a6dbf3"
+  },
+  {
+    "file": "licenses/Vega-Embed-6.23.0-LICENSE",
+    "url": "https://github.com/vega/vega-embed/blob/v6.23.0/LICENSE",
+    "git_blob_sha": "0ca363042461690cd61d1feb4b7bd1ea20d9df87"
+  },
+  {
+    "file": "licenses/WaveDrom-3.3.0-LICENSE",
+    "url": "https://github.com/wavedrom/wavedrom/blob/b63c05c8730c6588edd18235c01b3ddea0e78ce2/LICENSE",
+    "git_blob_sha": "1470ae33f02e7af0f63dd89023de265db45ecb3f"
+  },
+  {
+    "file": "licenses/Mermaid-12.0.0-LICENSE",
+    "url": "https://github.com/mermaid-js/mermaid/blob/mermaid@12.0.0/LICENSE",
+    "git_blob_sha": "2e5daebd2ad0fb200080a27d98aec5f04902acdd"
+  },
+  {
+    "file": "licenses/League-Gothic-OFL.md",
+    "url": "https://github.com/theleagueof/league-gothic/blob/master/OFL.md",
+    "git_blob_sha": "78cc3c9603f5aebba5fe839878b51e0375c39513"
+  },
+  {
+    "file": "licenses/Remarkable-1.7.1-LICENSE",
+    "url": "https://github.com/jonschlinkert/remarkable/blob/1.7.1/LICENSE",
+    "git_blob_sha": "193b5ebce8f9f3e263961e7fa7017c9411fcc5de"
+  }
+]

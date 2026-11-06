@@ -1,0 +1,309 @@
+/**
+ * Minimal in-memory stand-ins for the `vscode` and `crossnote` modules, used to
+ * bundle and exercise extension code that would otherwise only run inside an
+ * Extension Host.
+ *
+ * The stubs record what the extension did (registered commands, clipboard
+ * writes, warnings) so tests can assert on it.
+ */
+
+const recorder = {
+  commands: new Map(),
+  clipboard: { text: null },
+  warnings: [],
+  activeEditorHandlers: [],
+  configUpdates: [],
+  configHandlers: [],
+  reset() {
+    this.commands = new Map();
+    this.clipboard = { text: null };
+    this.warnings = [];
+    this.activeEditorHandlers = [];
+    this.configUpdates = [];
+    this.configHandlers = [];
+  },
+};
+
+const VSCODE_STUB_SOURCE = `
+  const recorder = globalThis.__vscodeStubRecorder;
+  const noop = () => {};
+  const disposable = { dispose: noop };
+  const event = () => disposable;
+
+  class Uri {
+    constructor(scheme, authority, path, query, fragment) {
+      this.scheme = scheme;
+      this.authority = authority;
+      this.path = path;
+      this.query = query || '';
+      this.fragment = fragment || '';
+    }
+    static file(path) {
+      return new Uri('file', '', path);
+    }
+    static parse(value) {
+      const m = /^([a-z][a-z0-9+.-]*):\\/\\/([^/?#]*)([^?#]*)(?:\\?([^#]*))?(?:#(.*))?$/i.exec(value);
+      return m ? new Uri(m[1], m[2], m[3], m[4], m[5]) : new Uri('file', '', value);
+    }
+    static joinPath(base, ...parts) {
+      return new Uri(base.scheme, base.authority, [base.path, ...parts].join('/'));
+    }
+    get fsPath() {
+      return this.path;
+    }
+    with(change) {
+      return new Uri(
+        change.scheme === undefined ? this.scheme : change.scheme,
+        change.authority === undefined ? this.authority : change.authority,
+        change.path === undefined ? this.path : change.path,
+        change.query === undefined ? this.query : change.query,
+        change.fragment === undefined ? this.fragment : change.fragment,
+      );
+    }
+    toString() {
+      return (
+        this.scheme + '://' + this.authority + this.path +
+        (this.query ? '?' + this.query : '') +
+        (this.fragment ? '#' + this.fragment : '')
+      );
+    }
+  }
+
+  module.exports = {
+    Uri,
+    ViewColumn: { One: 1, Two: 2, Active: -1, Beside: -2 },
+    ConfigurationTarget: { Global: 1, Workspace: 2, WorkspaceFolder: 3 },
+    // Mirror vscode.l10n.t without a bundle: the source string is the
+    // English text, with {name} placeholders substituted from the args
+    // record (tests assert on the interpolated result).
+    l10n: {
+      t(message, args) {
+        if (!args || typeof args !== 'object') {
+          return message;
+        }
+        return message.replace(/\{(\w+)\}/g, (_, key) => String(args[key]));
+      },
+    },
+    window: {
+      createWebviewPanel: () => {
+        throw new Error('createWebviewPanel is not stubbed; pass a webviewPanel instead');
+      },
+      showErrorMessage: noop,
+      showWarningMessage: (message) => {
+        recorder.warnings.push(message);
+        return Promise.resolve(undefined);
+      },
+      showInformationMessage: noop,
+      showQuickPick: async () => undefined,
+      showInputBox: async () => undefined,
+      createOutputChannel: () => ({ appendLine: noop, show: noop, dispose: noop }),
+      createStatusBarItem: () => ({ show: noop, hide: noop, dispose: noop, text: '' }),
+      registerWebviewPanelSerializer: () => disposable,
+      registerCustomEditorProvider: () => disposable,
+      withProgress: async (_options, task) => task({ report: noop }, { isCancellationRequested: false }),
+      onDidChangeActiveTextEditor: (handler) => {
+        recorder.activeEditorHandlers.push(handler);
+        return disposable;
+      },
+      onDidChangeTextEditorSelection: event,
+      onDidChangeTextEditorVisibleRanges: event,
+      onDidChangeTextEditorViewColumn: event,
+      onDidChangeVisibleTextEditors: event,
+      onDidChangeActiveColorTheme: event,
+      onDidChangeWindowState: event,
+      visibleTextEditors: [],
+      activeTextEditor: undefined,
+      activeColorTheme: { kind: 1 },
+      tabGroups: { all: [], onDidChangeTabs: event, close: async () => true },
+    },
+    workspace: {
+      get workspaceFolders() {
+        return globalThis.__vscodeStubWorkspaceFolders ?? [];
+      },
+      get isTrusted() {
+        return globalThis.__vscodeStubIsTrusted !== false;
+      },
+      textDocuments: [],
+      getConfiguration: (namespace) => {
+        const scopes = globalThis.__vscodeStubNamespaces?.[namespace];
+        return {
+          get: (section) => scopes
+            ? ['workspaceFolderLanguageValue', 'workspaceLanguageValue', 'globalLanguageValue', 'workspaceFolderValue', 'workspaceValue', 'globalValue', 'defaultValue'].map(key => scopes[key]?.[section]).find(value => value !== undefined)
+            : (globalThis.__vscodeStubConfiguration ?? {})[section],
+          inspect: (section) => scopes
+            ? Object.fromEntries([['key', section], ...Object.entries(scopes).map(([key, value]) => [key, value[section]])])
+            : ({ key: section,
+              globalValue: (globalThis.__vscodeStubConfigurationScopes?.global ?? {})[section],
+              workspaceValue: (globalThis.__vscodeStubConfigurationScopes?.workspace ?? {})[section],
+            }),
+          update: async (section, value, target) => { recorder.configUpdates.push({ namespace, section, value, target }); },
+        };
+      },
+      getWorkspaceFolder: (uri) => globalThis.__vscodeStubWorkspaceFolder(uri),
+      asRelativePath: (uri) => globalThis.__vscodeStubRelativePath(uri),
+      openTextDocument: async () => ({ getText: () => '', uri: Uri.file('/ws/a.md') }),
+      applyEdit: async () => true,
+      registerTextDocumentContentProvider: () => disposable,
+      createFileSystemWatcher: () => ({ onDidCreate: event, onDidChange: event, onDidDelete: event, dispose: noop }),
+      findFiles: async () => [],
+      fs: { readFile: async () => new Uint8Array(), writeFile: async () => {}, stat: async () => ({}) },
+      onDidChangeConfiguration: (handler) => { recorder.configHandlers.push(handler); return disposable; },
+      onDidSaveTextDocument: event,
+      onDidChangeTextDocument: event,
+      onDidCloseTextDocument: event,
+      onDidOpenTextDocument: event,
+      onDidChangeWorkspaceFolders: event,
+      onDidCreateFiles: event,
+      onDidDeleteFiles: event,
+      onDidRenameFiles: event,
+    },
+    commands: {
+      executeCommand: async () => {},
+      registerCommand: (id, handler) => {
+        recorder.commands.set(id, handler);
+        return disposable;
+      },
+      registerTextEditorCommand: (id, handler) => {
+        recorder.commands.set(id, handler);
+        return disposable;
+      },
+    },
+    env: {
+      clipboard: {
+        writeText: async (text) => {
+          recorder.clipboard.text = text;
+        },
+        readText: async () => '',
+      },
+      openExternal: async () => true,
+      uriScheme: 'vscode',
+      appName: 'VS Code',
+    },
+    Position: class { constructor(line, character) { this.line = line; this.character = character; } },
+    Range: class { constructor(start, end) { this.start = start; this.end = end; } },
+    Selection: class { constructor(anchor, active) { this.anchor = anchor; this.active = active; } },
+    EventEmitter: class { constructor() { this.event = event; } fire() {} dispose() {} },
+    Disposable: class { static from() { return disposable; } dispose() {} },
+    WorkspaceEdit: class { insert() {} replace() {} delete() {} },
+    ExtensionMode: { Production: 1, Development: 2, Test: 3 },
+    ColorThemeKind: { Light: 1, Dark: 2 },
+    ProgressLocation: { Notification: 15 },
+    StatusBarAlignment: { Left: 1, Right: 2 },
+    TabInputCustom: class {},
+    TabInputText: class {},
+  };
+`;
+
+const CROSSNOTE_STUB_SOURCE = `
+  module.exports = {
+    Notebook: {
+      init: async ({ notebookPath, fs }) => ({
+        notebookPath,
+        notes: {},
+        config: {},
+        fs: { ...fs, exists: async (file) => globalThis.__crossnoteStubExists?.(file) ?? false },
+        updateConfig(config) { Object.assign(this.config, config); },
+        refreshNotesIfNotLoaded: async () => {
+          globalThis.__vscodeStubNotebookRefreshes.push('ifNotLoaded');
+          return {};
+        },
+        refreshNotesIncremental: async () => {
+          globalThis.__vscodeStubNotebookRefreshes.push('incremental');
+          return {};
+        },
+        getNoteBacklinks: async () => [],
+        getNotesReferringToTag: async () => ({}),
+        getAllTags: async () => [],
+        getNoteMarkdownEngine: () => globalThis.__crossnoteStubEngine(),
+        clearAllNoteMarkdownEngineCaches: () => {},
+      }),
+    },
+    PreviewMode: {
+      SinglePreview: 'Single Preview',
+      MultiplePreviews: 'Multiple Previews',
+      PreviewsOnly: 'Previews Only',
+    },
+    utility: {
+      getCrossnoteBuildDirectory: () => '/tmp/crossnote',
+      setCrossnoteBuildDirectory: () => {},
+      useExternalAddFileProtocolFunction: () => {},
+      addFileProtocol: (value) => value,
+      escapeString: (value) => value,
+      unescapeString: (value) => value,
+    },
+    ImageUploader: {},
+    getDefaultNotebookConfig: () => ({}),
+    loadConfigsInDirectory: async (...args) => globalThis.__crossnoteStubLoadConfigs?.(...args) ?? {},
+  };
+`;
+
+/** esbuild plugin that resolves `vscode` and `crossnote` to the stubs above. */
+function stubPlugin() {
+  return {
+    name: 'vscode-crossnote-stub',
+    setup(build) {
+      build.onResolve({ filter: /^(vscode|crossnote)$/ }, (args) => ({
+        path: args.path,
+        namespace: 'extension-stub',
+      }));
+      build.onLoad({ filter: /.*/, namespace: 'extension-stub' }, (args) => ({
+        contents:
+          args.path === 'vscode' ? VSCODE_STUB_SOURCE : CROSSNOTE_STUB_SOURCE,
+        loader: 'js',
+      }));
+    },
+  };
+}
+
+globalThis.__vscodeStubRecorder = recorder;
+globalThis.__vscodeStubWorkspaceFolder = () => undefined;
+globalThis.__vscodeStubWorkspaceFolders = [];
+globalThis.__vscodeStubRelativePath = (uri) => String(uri);
+globalThis.__vscodeStubNotebookRefreshes = [];
+globalThis.__vscodeStubConfiguration = {};
+globalThis.__vscodeStubConfigurationScopes = { global: {}, workspace: {} };
+globalThis.__vscodeStubIsTrusted = true;
+globalThis.__crossnoteStubEngine = () => ({
+  generateHTMLTemplateForPreview: async () => '<html></html>',
+});
+
+module.exports = {
+  recorder,
+  stubPlugin,
+  setWorkspaceFolderResolver(fn) {
+    globalThis.__vscodeStubWorkspaceFolder = fn;
+  },
+  setWorkspaceFolders(folders) {
+    globalThis.__vscodeStubWorkspaceFolders = folders;
+  },
+  setRelativePathResolver(fn) {
+    globalThis.__vscodeStubRelativePath = fn;
+  },
+  setConfigLoader(fn) {
+    globalThis.__crossnoteStubLoadConfigs = fn;
+  },
+  setFileExists(fn) {
+    globalThis.__crossnoteStubExists = fn;
+  },
+  setMarkdownEngine(fn) {
+    globalThis.__crossnoteStubEngine = fn;
+  },
+  setNamespaces(config) {
+    globalThis.__vscodeStubNamespaces = config;
+  },
+  setConfiguration(config) {
+    globalThis.__vscodeStubConfiguration = config;
+  },
+  /**
+   * Settings as VS Code would report them per scope. The merged view `get()`
+   * returns follows, workspace over user, so a test cannot set the two out of
+   * step with each other.
+   */
+  setConfigurationScopes({ global = {}, workspace = {} } = {}) {
+    globalThis.__vscodeStubConfigurationScopes = { global, workspace };
+    globalThis.__vscodeStubConfiguration = { ...global, ...workspace };
+  },
+  setWorkspaceTrusted(trusted) {
+    globalThis.__vscodeStubIsTrusted = trusted;
+  },
+};

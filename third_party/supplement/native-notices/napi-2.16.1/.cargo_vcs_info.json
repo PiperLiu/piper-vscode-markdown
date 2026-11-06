@@ -1,0 +1,6 @@
+{
+  "git": {
+    "sha1": "6d4ff7ca51e39cf8a507c871efa6d2c9ec1eed2b"
+  },
+  "path_in_vcs": "crates/napi"
+}

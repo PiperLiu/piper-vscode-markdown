@@ -1,0 +1,8 @@
+node_modules/
+bin/
+*.vsix
+.DS_Store
+*.log
+vendor/mpe/out/
+vendor/mpe/crossnote/
+.playwright-mcp/

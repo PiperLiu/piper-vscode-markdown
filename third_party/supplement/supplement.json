@@ -1,0 +1,920 @@
+{
+  "schemaVersion": 1,
+  "scope": "Supplement for vendored MPE/Crossnote assets and covered source components. No optional external TikZ implementation is included.",
+  "excludePackageNames": [
+    "node-tikzjax",
+    "@prinsss/dvi2html"
+  ],
+  "conditionalExcludedPackages": [
+    {
+      "name": "@img/sharp-libvips-darwin-arm64",
+      "reason": "Exclude from distributed inventory only when final VSIX contains no libvips binary/code; sharp wrapper itself is distinct."
+    }
+  ],
+  "modules": [
+    {
+      "name": "Markdown Preview Enhanced",
+      "version": "0.8.40",
+      "license": "NCSA",
+      "copyright": "Copyright (c) 2017 Yiyi Wang; developed by Yiyi Wang and contributors",
+      "licenseFiles": [
+        "licenses/MPE-NCSA.txt"
+      ],
+      "sourceUrls": [
+        "https://github.com/shd101wyy/vscode-markdown-preview-enhanced/tree/25fcd8e05ddf5b93c7b1f68adea2bd1189ec6e69"
+      ]
+    },
+    {
+      "name": "Crossnote",
+      "version": "0.9.42",
+      "license": "NCSA",
+      "licenseFiles": [
+        "licenses/Crossnote-NCSA.txt"
+      ],
+      "sourceUrls": [
+        "https://github.com/shd101wyy/crossnote"
+      ]
+    },
+    {
+      "name": "elkjs",
+      "version": "0.9.3",
+      "license": "EPL-2.0",
+      "licenseFiles": [
+        "licenses/EPL-2.0.txt",
+        "licenses/ELK-0.9.1-NOTICE.md"
+      ],
+      "sourceUrls": [
+        "https://github.com/kieler/elkjs/tree/0.9.3",
+        "https://github.com/eclipse-elk/elk/tree/v0.9.1",
+        "https://github.com/eclipse-elk/elk/pull/955"
+      ],
+      "notes": "Original EPL source and notices remain under EPL-2.0. The upstream 0.9.3 release states ELK 0.9.1 plus PR955; compiled worker JavaScript alone is not preferred source."
+    },
+    {
+      "name": "Viz.js wrapper",
+      "version": "3.29.0",
+      "license": "MIT",
+      "licenseFiles": [
+        "licenses/Viz-MIT.txt"
+      ],
+      "sourceUrls": [
+        "https://github.com/mdaines/viz-js/tree/release-viz-3.29.0"
+      ]
+    },
+    {
+      "name": "Graphviz (inside Viz WebAssembly)",
+      "version": "15.1.1",
+      "license": "EPL-2.0",
+      "licenseFiles": [
+        "licenses/EPL-2.0.txt"
+      ],
+      "sourceUrls": [
+        "https://gitlab.com/graphviz/graphviz/-/tree/15.1.1",
+        "https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/15.1.1/graphviz-15.1.1.tar.gz"
+      ],
+      "notes": "Corresponding source is available under EPL-2.0. Exact version confirmed by installed lib/metadata.js and Viz release build recipe."
+    },
+    {
+      "name": "Expat (inside Viz WebAssembly)",
+      "version": "2.8.1",
+      "license": "MIT",
+      "licenseFiles": [
+        "licenses/Expat-2.8.1-COPYING"
+      ],
+      "sourceUrls": [
+        "https://github.com/libexpat/libexpat/tree/R_2_8_1"
+      ]
+    },
+    {
+      "name": "markdown-it-html5-embed",
+      "version": "1.0.0",
+      "license": "MPL-2.0",
+      "licenseFiles": [
+        "sources/markdown-it-html5-embed-1.0.0/LICENSE"
+      ],
+      "sourceFiles": [
+        "sources/markdown-it-html5-embed-1.0.0/lib/index.js",
+        "sources/markdown-it-html5-embed-1.0.0/package.json",
+        "sources/markdown-it-html5-embed-1.0.0/README.md"
+      ],
+      "sourceUrls": [
+        "https://github.com/cmrd-senya/markdown-it-html5-embed/tree/v1.0.0"
+      ],
+      "notes": "The distributed preferred source and MPL licence are included unmodified. npm lib/index.js git blob e642a6b7864f5974e4be333cae22ac046248d242 exactly matches v1.0.0."
+    },
+    {
+      "name": "Font Awesome Free",
+      "version": "6.4.2",
+      "license": "CC-BY-4.0 AND OFL-1.1 AND MIT",
+      "licenseFiles": [
+        "licenses/Font-Awesome-6.4.2-LICENSE.txt"
+      ],
+      "sourceUrls": [
+        "https://github.com/FortAwesome/Font-Awesome/tree/6.4.2"
+      ],
+      "notes": "Icons CC-BY-4.0; fonts OFL-1.1; code MIT. Copyright 2023 Fonticons, Inc."
+    },
+    {
+      "name": "KaTeX CSS/code",
+      "version": "0.16.47",
+      "license": "MIT",
+      "licenseFiles": [
+        "licenses/KaTeX-0.16.47-LICENSE"
+      ],
+      "sourceUrls": [
+        "https://github.com/KaTeX/KaTeX/tree/v0.16.47"
+      ]
+    },
+    {
+      "name": "KaTeX fonts",
+      "version": "as bundled by KaTeX 0.16.47",
+      "license": "OFL-1.1",
+      "licenseFiles": [
+        "licenses/KaTeX-fonts-OFL.txt"
+      ],
+      "sourceUrls": [
+        "https://github.com/KaTeX/KaTeX/tree/v0.16.47/fonts"
+      ],
+      "notes": "Licence and copyright statements extracted from the actual 20 distributed TTF name tables; see katex-font-metadata.json."
+    },
+    {
+      "name": "Reveal.js",
+      "version": "4.6.0",
+      "license": "MIT",
+      "licenseFiles": [
+        "licenses/Reveal-4.6.0-LICENSE"
+      ],
+      "sourceUrls": [
+        "https://github.com/hakimel/reveal.js/tree/4.6.0"
+      ],
+      "notes": "Crossnote's vendored copy removes font:inherit from reveal.css as documented upstream."
+    },
+    {
+      "name": "Source Sans Pro",
+      "version": "vendored with Reveal.js",
+      "license": "OFL-1.1",
+      "licenseFiles": [
+        "licenses/Source-Sans-Pro-OFL.txt"
+      ],
+      "sourceUrls": [
+        "https://github.com/adobe-fonts/source-sans"
+      ],
+      "notes": "Exact bundled licence preserved."
+    },
+    {
+      "name": "League Gothic",
+      "version": "vendored with Reveal.js",
+      "license": "OFL-1.1",
+      "licenseFiles": [
+        "licenses/League-Gothic-OFL.md"
+      ],
+      "sourceUrls": [
+        "https://github.com/theleagueof/league-gothic"
+      ],
+      "notes": "Original bundled TTF copyright: 2009 - 2011, The League of Moveable Type. Complete current upstream OFL includes additional authors; retain original font metadata."
+    },
+    {
+      "name": "Mermaid",
+      "version": "12.0.0",
+      "license": "MIT",
+      "licenseFiles": [
+        "licenses/Mermaid-12.0.0-LICENSE"
+      ],
+      "sourceUrls": [
+        "https://github.com/mermaid-js/mermaid/tree/mermaid@12.0.0"
+      ]
+    },
+    {
+      "name": "WaveDrom",
+      "version": "3.3.0",
+      "license": "MIT",
+      "licenseFiles": [
+        "licenses/WaveDrom-3.3.0-LICENSE"
+      ],
+      "sourceUrls": [
+        "https://github.com/wavedrom/wavedrom/tree/b63c05c8730c6588edd18235c01b3ddea0e78ce2"
+      ]
+    },
+    {
+      "name": "Vega",
+      "version": "5.25.0",
+      "license": "BSD-3-Clause",
+      "licenseFiles": [
+        "licenses/Vega-5.25.0-LICENSE"
+      ],
+      "sourceUrls": [
+        "https://github.com/vega/vega/tree/v5.25.0"
+      ]
+    },
+    {
+      "name": "Vega-Lite",
+      "version": "5.16.1",
+      "license": "BSD-3-Clause",
+      "licenseFiles": [
+        "licenses/Vega-Lite-5.16.1-LICENSE"
+      ],
+      "sourceUrls": [
+        "https://github.com/vega/vega-lite/tree/v5.16.1"
+      ],
+      "notes": "Crossnote documents require-path and structuredClone compatibility edits; preserve its build provenance."
+    },
+    {
+      "name": "Vega-Embed",
+      "version": "6.23.0",
+      "license": "BSD-3-Clause",
+      "licenseFiles": [
+        "licenses/Vega-Embed-6.23.0-LICENSE"
+      ],
+      "sourceUrls": [
+        "https://github.com/vega/vega-embed/tree/v6.23.0"
+      ]
+    },
+    {
+      "name": "Remarkable",
+      "version": "1.7.1",
+      "license": "MIT",
+      "licenseFiles": [
+        "licenses/Remarkable-1.7.1-LICENSE"
+      ],
+      "sourceUrls": [
+        "https://github.com/jonschlinkert/remarkable/tree/1.7.1"
+      ]
+    },
+    {
+      "name": "electronic-post-message-derived Electron bridge",
+      "version": "upstream package 1.0.0",
+      "license": "ISC",
+      "licenseFiles": [
+        "licenses/Electronic-Post-Message-ISC.txt"
+      ],
+      "sourceUrls": [
+        "https://github.com/KidkArolis/electronic-post-message/blob/master/epm.js"
+      ],
+      "notes": "Crossnote electron-webview/preload.js retains its original source attribution. Upstream package metadata supplies ISC and author; no standalone licence file is provided."
+    },
+    {
+      "name": "resvg-js native SVG renderer",
+      "version": "2.6.2",
+      "license": "MPL-2.0",
+      "licenseFiles": [
+        "sources/resvg-js-2.6.2/LICENSE"
+      ],
+      "sourceFiles": [
+        "sources/resvg-js-2.6.2/Cargo.toml",
+        "sources/resvg-js-2.6.2/src/lib.rs",
+        "sources/resvg-js-2.6.2/src/fonts.rs",
+        "sources/resvg-js-2.6.2/src/error.rs",
+        "sources/resvg-js-2.6.2/src/options.rs",
+        "sources/resvg-js-2.6.2/build.rs"
+      ],
+      "sourceUrls": [
+        "https://github.com/thx/resvg-js/tree/9ca058462ac529120c8cc84ddcd6fef644cc5406",
+        "https://github.com/zimond/resvg/tree/3495d870"
+      ],
+      "notes": "Native darwin-arm64 addon is distributed. Preferred wrapper source is included unmodified. Cargo.toml identifies the MPL resvg fork pinned at 3495d870 and an Apache2 WOFF2 fork; original Rust component licences also remain applicable."
+    },
+    {
+      "name": "Rust crate adler32",
+      "version": "1.2.0",
+      "license": "Zlib",
+      "licenseFiles": [
+        "native-notices/adler32-1.2.0/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/adler32/adler32-1.2.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 aae1277d39aeec15cb388266ecc24b11c80469deae6067e17a1a7aa9e5c1f234"
+    },
+    {
+      "name": "Rust crate aho-corasick",
+      "version": "1.1.3",
+      "license": "Unlicense OR MIT",
+      "licenseFiles": [
+        "native-notices/aho-corasick-1.1.3/COPYING",
+        "native-notices/aho-corasick-1.1.3/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/aho-corasick/aho-corasick-1.1.3.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 8e60d3430d3a69478ad0993f19238d2df97c507009a52b3c10addcd7f6bcb916"
+    },
+    {
+      "name": "Rust crate anstream",
+      "version": "0.6.13",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/anstream-0.6.13/LICENSE-APACHE",
+        "native-notices/anstream-0.6.13/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/anstream/anstream-0.6.13.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 d96bd03f33fe50a863e394ee9718a706f988b9079b20c3784fb726e7678b62fb"
+    },
+    {
+      "name": "Rust crate anstyle",
+      "version": "1.0.6",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/anstyle-1.0.6/LICENSE-APACHE",
+        "native-notices/anstyle-1.0.6/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/anstyle/anstyle-1.0.6.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 8901269c6307e8d93993578286ac0edf7f195079ffff5ebdeea6a59ffb7e36bc"
+    },
+    {
+      "name": "Rust crate arrayvec",
+      "version": "0.7.4",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/arrayvec-0.7.4/LICENSE-APACHE",
+        "native-notices/arrayvec-0.7.4/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/arrayvec/arrayvec-0.7.4.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
+    },
+    {
+      "name": "Rust crate base64",
+      "version": "0.21.7",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/base64-0.21.7/LICENSE-APACHE",
+        "native-notices/base64-0.21.7/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/base64/base64-0.21.7.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
+    },
+    {
+      "name": "Rust crate bytemuck",
+      "version": "1.15.0",
+      "license": "Zlib OR Apache-2.0 OR MIT",
+      "licenseFiles": [
+        "native-notices/bytemuck-1.15.0/LICENSE-APACHE",
+        "native-notices/bytemuck-1.15.0/LICENSE-ZLIB",
+        "native-notices/bytemuck-1.15.0/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/bytemuck/bytemuck-1.15.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 5d6d68c57235a3a081186990eca2867354726650f42f7516ca50c28d6281fd15"
+    },
+    {
+      "name": "Rust crate data-url",
+      "version": "0.2.0",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/data-url-0.2.0/LICENSE-APACHE",
+        "native-notices/data-url-0.2.0/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/data-url/data-url-0.2.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 8d7439c3735f405729d52c3fbbe4de140eaf938a1fe47d227c27f8254d4302a5"
+    },
+    {
+      "name": "Rust crate deflate",
+      "version": "1.0.0",
+      "license": "MIT/Apache-2.0",
+      "licenseFiles": [
+        "native-notices/deflate-1.0.0/LICENSE-APACHE",
+        "native-notices/deflate-1.0.0/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/deflate/deflate-1.0.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 c86f7e25f518f4b81808a2cf1c50996a61f5c2eb394b2393bd87f2a4780a432f"
+    },
+    {
+      "name": "Rust crate env_filter",
+      "version": "0.1.0",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/env_filter-0.1.0/LICENSE-APACHE",
+        "native-notices/env_filter-0.1.0/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/env_filter/env_filter-0.1.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 a009aa4810eb158359dda09d0c87378e4bbb89b5a801f016885a4707ba24f7ea"
+    },
+    {
+      "name": "Rust crate env_logger",
+      "version": "0.11.3",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/env_logger-0.11.3/LICENSE-APACHE",
+        "native-notices/env_logger-0.11.3/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/env_logger/env_logger-0.11.3.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 38b35839ba51819680ba087cd351788c9a3c476841207e0b8cee0b04722343b9"
+    },
+    {
+      "name": "Rust crate flate2",
+      "version": "1.0.28",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/flate2-1.0.28/LICENSE-APACHE",
+        "native-notices/flate2-1.0.28/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/flate2/flate2-1.0.28.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 46303f565772937ffe1d394a4fac6f411c6013172fadde9dcdb1e147a086940e"
+    },
+    {
+      "name": "Rust crate fontdb",
+      "version": "0.14.1",
+      "license": "MIT",
+      "licenseFiles": [
+        "native-notices/fontdb-0.14.1/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/fontdb/fontdb-0.14.1.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 af8d8cbea8f21307d7e84bca254772981296f058a1d36b461bf4d83a7499fc9e"
+    },
+    {
+      "name": "Rust crate gif",
+      "version": "0.12.0",
+      "license": "MIT/Apache-2.0",
+      "licenseFiles": [
+        "native-notices/gif-0.12.0/LICENSE-APACHE",
+        "native-notices/gif-0.12.0/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/gif/gif-0.12.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 80792593675e051cf94a4b111980da2ba60d4a83e43e0048c5693baab3977045"
+    },
+    {
+      "name": "Rust crate humantime",
+      "version": "2.1.0",
+      "license": "MIT/Apache-2.0",
+      "licenseFiles": [
+        "native-notices/humantime-2.1.0/LICENSE-APACHE",
+        "native-notices/humantime-2.1.0/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/humantime/humantime-2.1.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
+    },
+    {
+      "name": "Rust crate imagesize",
+      "version": "0.12.0",
+      "license": "MIT",
+      "licenseFiles": [
+        "native-notices/imagesize-0.12.0/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/imagesize/imagesize-0.12.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 029d73f573d8e8d63e6d5020011d3255b28c3ba85d6cf870a07184ed23de9284"
+    },
+    {
+      "name": "Rust crate jpeg-decoder",
+      "version": "0.3.1",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/jpeg-decoder-0.3.1/LICENSE-APACHE",
+        "native-notices/jpeg-decoder-0.3.1/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/jpeg-decoder/jpeg-decoder-0.3.1.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 f5d4a7da358eff58addd2877a45865158f0d78c911d43a5784ceb7bbf52833b0"
+    },
+    {
+      "name": "Rust crate kurbo",
+      "version": "0.9.5",
+      "license": "MIT/Apache-2.0",
+      "licenseFiles": [
+        "native-notices/kurbo-0.9.5/LICENSE-APACHE",
+        "native-notices/kurbo-0.9.5/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/kurbo/kurbo-0.9.5.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 bd85a5776cd9500c2e2059c8c76c3b01528566b7fcbaf8098b55a33fc298849b"
+    },
+    {
+      "name": "Rust crate memchr",
+      "version": "2.7.1",
+      "license": "Unlicense OR MIT",
+      "licenseFiles": [
+        "native-notices/memchr-2.7.1/COPYING",
+        "native-notices/memchr-2.7.1/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/memchr/memchr-2.7.1.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
+    },
+    {
+      "name": "Rust crate miniz_oxide",
+      "version": "0.5.4",
+      "license": "MIT OR Zlib OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/miniz_oxide-0.5.4/LICENSE-MIT.md",
+        "native-notices/miniz_oxide-0.5.4/LICENSE-ZLIB.md",
+        "native-notices/miniz_oxide-0.5.4/LICENSE",
+        "native-notices/miniz_oxide-0.5.4/LICENSE-APACHE.md"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/miniz_oxide/miniz_oxide-0.5.4.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 96590ba8f175222643a85693f33d26e9c8a015f599c216509b1a6894af675d34"
+    },
+    {
+      "name": "Rust crate miniz_oxide",
+      "version": "0.7.2",
+      "license": "MIT OR Zlib OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/miniz_oxide-0.7.2/LICENSE-MIT.md",
+        "native-notices/miniz_oxide-0.7.2/LICENSE-ZLIB.md",
+        "native-notices/miniz_oxide-0.7.2/LICENSE",
+        "native-notices/miniz_oxide-0.7.2/LICENSE-APACHE.md"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/miniz_oxide/miniz_oxide-0.7.2.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 9d811f3e15f28568be3407c8e7fdb6514c1cda3cb30683f15b6a1a1dc4ea14a7"
+    },
+    {
+      "name": "Rust crate napi",
+      "version": "2.16.1",
+      "license": "MIT",
+      "licenseFiles": [
+        "native-notices/napi-2.16.1/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/napi/napi-2.16.1.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 c4ca998356d8ff9fba7a070dae4508a2298439c98c9f3bc9c07669538b999e8f"
+    },
+    {
+      "name": "Rust crate once_cell",
+      "version": "1.19.0",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/once_cell-1.19.0/LICENSE-APACHE",
+        "native-notices/once_cell-1.19.0/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/once_cell/once_cell-1.19.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
+    },
+    {
+      "name": "Rust crate pathfinder_content",
+      "version": "0.5.0",
+      "license": "MIT/Apache-2.0",
+      "licenseFiles": [
+        "native-notices/pathfinder_content-0.5.0/LICENSE-APACHE",
+        "native-notices/pathfinder_content-0.5.0/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/pathfinder_content/pathfinder_content-0.5.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 6449e0cfa07ca782719467da7cf928625ea43375c9cd0f3104817ecd8825ca69"
+    },
+    {
+      "name": "Rust crate png",
+      "version": "0.17.5",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/png-0.17.5/LICENSE-APACHE",
+        "native-notices/png-0.17.5/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/png/png-0.17.5.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 dc38c0ad57efb786dd57b9864e5b18bae478c00c824dc55a38bbc9da95dde3ba"
+    },
+    {
+      "name": "Rust crate rctree",
+      "version": "0.5.0",
+      "license": "MIT",
+      "licenseFiles": [
+        "native-notices/rctree-0.5.0/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/rctree/rctree-0.5.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 3b42e27ef78c35d3998403c1d26f3efd9e135d3e5121b0a4845cc5cc27547f4f"
+    },
+    {
+      "name": "Rust crate regex",
+      "version": "1.10.4",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/regex-1.10.4/LICENSE-APACHE",
+        "native-notices/regex-1.10.4/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/regex/regex-1.10.4.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 c117dbdfde9c8308975b6a18d71f3f385c89461f7b3fb054288ecf2a2058ba4c"
+    },
+    {
+      "name": "Rust crate regex-automata",
+      "version": "0.4.6",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/regex-automata-0.4.6/LICENSE-APACHE",
+        "native-notices/regex-automata-0.4.6/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/regex-automata/regex-automata-0.4.6.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 86b83b8b9847f9bf95ef68afb0b8e6cdb80f498442f5179a29fad448fcc1eaea"
+    },
+    {
+      "name": "Rust crate regex-syntax",
+      "version": "0.8.2",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/regex-syntax-0.8.2/LICENSE-APACHE",
+        "native-notices/regex-syntax-0.8.2/LICENSE-MIT",
+        "native-notices/regex-syntax-0.8.2/src/unicode_tables/LICENSE-UNICODE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/regex-syntax/regex-syntax-0.8.2.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
+    },
+    {
+      "name": "Rust crate roxmltree",
+      "version": "0.18.1",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/roxmltree-0.18.1/LICENSE-APACHE",
+        "native-notices/roxmltree-0.18.1/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/roxmltree/roxmltree-0.18.1.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 862340e351ce1b271a378ec53f304a5558f7db87f3769dc655a8f6ecbb68b302"
+    },
+    {
+      "name": "Rust crate rustybuzz",
+      "version": "0.7.0",
+      "license": "MIT",
+      "licenseFiles": [
+        "native-notices/rustybuzz-0.7.0/LICENSE",
+        "native-notices/rustybuzz-0.7.0/scripts/ms-use/COPYING"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/rustybuzz/rustybuzz-0.7.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 162bdf42e261bee271b3957691018634488084ef577dddeb6420a9684cab2a6a"
+    },
+    {
+      "name": "Rust crate serde",
+      "version": "1.0.197",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/serde-1.0.197/LICENSE-APACHE",
+        "native-notices/serde-1.0.197/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/serde/serde-1.0.197.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 3fb1c873e1b9b056a4dc4c0c198b24c3ffa059243875552b2bd0933b1aee4ce2"
+    },
+    {
+      "name": "Rust crate serde_json",
+      "version": "1.0.115",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/serde_json-1.0.115/LICENSE-APACHE",
+        "native-notices/serde_json-1.0.115/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/serde_json/serde_json-1.0.115.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 12dc5c46daa8e9fdf4f5e71b6cf9a53f2487da0e86e55808e2d35539666497dd"
+    },
+    {
+      "name": "Rust crate simplecss",
+      "version": "0.2.1",
+      "license": "MIT/Apache-2.0",
+      "licenseFiles": [
+        "native-notices/simplecss-0.2.1/LICENSE-APACHE",
+        "native-notices/simplecss-0.2.1/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/simplecss/simplecss-0.2.1.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 a11be7c62927d9427e9f40f3444d5499d868648e2edbc4e2116de69e7ec0e89d"
+    },
+    {
+      "name": "Rust crate slotmap",
+      "version": "1.0.7",
+      "license": "Zlib",
+      "licenseFiles": [
+        "native-notices/slotmap-1.0.7/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/slotmap/slotmap-1.0.7.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 dbff4acf519f630b3a3ddcfaea6c06b42174d9a44bc70c620e9ed1649d58b82a"
+    },
+    {
+      "name": "Rust crate smallvec",
+      "version": "1.13.2",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/smallvec-1.13.2/LICENSE-APACHE",
+        "native-notices/smallvec-1.13.2/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/smallvec/smallvec-1.13.2.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
+    },
+    {
+      "name": "Rust crate svgtypes",
+      "version": "0.11.0",
+      "license": "MIT/Apache-2.0",
+      "licenseFiles": [
+        "native-notices/svgtypes-0.11.0/LICENSE-APACHE",
+        "native-notices/svgtypes-0.11.0/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/svgtypes/svgtypes-0.11.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 ed4b0611e7f3277f68c0fa18e385d9e2d26923691379690039548f867cef02a7"
+    },
+    {
+      "name": "Rust crate svgtypes",
+      "version": "0.14.0",
+      "license": "MIT/Apache-2.0",
+      "licenseFiles": [
+        "native-notices/svgtypes-0.14.0/LICENSE-APACHE",
+        "native-notices/svgtypes-0.14.0/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/svgtypes/svgtypes-0.14.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 59d7618f12b51be8171a7cfdda1e7a93f79cbc57c4e7adf89a749cf671125241"
+    },
+    {
+      "name": "Rust crate tiny-skia",
+      "version": "0.10.0",
+      "license": "BSD-3-Clause",
+      "licenseFiles": [
+        "native-notices/tiny-skia-0.10.0/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/tiny-skia/tiny-skia-0.10.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 7db11798945fa5c3e5490c794ccca7c6de86d3afdd54b4eb324109939c6f37bc"
+    },
+    {
+      "name": "Rust crate tiny-skia-path",
+      "version": "0.10.0",
+      "license": "BSD-3-Clause",
+      "licenseFiles": [
+        "native-notices/tiny-skia-path-0.10.0/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/tiny-skia-path/tiny-skia-path-0.10.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 2f60aa35c89ac2687ace1a2556eaaea68e8c0d47408a2e3e7f5c98a489e7281c"
+    },
+    {
+      "name": "Rust crate tokio",
+      "version": "1.36.0",
+      "license": "MIT",
+      "licenseFiles": [
+        "native-notices/tokio-1.36.0/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/tokio/tokio-1.36.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 61285f6515fa018fb2d1e46eb21223fff441ee8db5d0f1435e8ab4f5cdb80931"
+    },
+    {
+      "name": "Rust crate ttf-parser",
+      "version": "0.18.1",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/ttf-parser-0.18.1/LICENSE-APACHE",
+        "native-notices/ttf-parser-0.18.1/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/ttf-parser/ttf-parser-0.18.1.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 0609f771ad9c6155384897e1df4d948e692667cc0588548b68eb44d052b27633"
+    },
+    {
+      "name": "Rust crate unicode-bidi",
+      "version": "0.3.15",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/unicode-bidi-0.3.15/LICENSE-APACHE",
+        "native-notices/unicode-bidi-0.3.15/COPYRIGHT",
+        "native-notices/unicode-bidi-0.3.15/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/unicode-bidi/unicode-bidi-0.3.15.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 08f95100a766bf4f8f28f90d77e0a5461bbdb219042e7679bebe79004fed8d75"
+    },
+    {
+      "name": "Rust crate unicode-general-category",
+      "version": "0.6.0",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "native-notices/unicode-general-category-0.6.0/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/unicode-general-category/unicode-general-category-0.6.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 2281c8c1d221438e373249e065ca4989c4c36952c211ff21a0ee91c44a3869e7"
+    },
+    {
+      "name": "Rust crate weezl",
+      "version": "0.1.8",
+      "license": "MIT OR Apache-2.0",
+      "licenseFiles": [
+        "native-notices/weezl-0.1.8/LICENSE-APACHE",
+        "native-notices/weezl-0.1.8/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/weezl/weezl-0.1.8.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 53a85b86a771b1c87058196170769dd264f66c0782acf1ae6cc51bfd64b39082"
+    },
+    {
+      "name": "Rust crate xmlparser",
+      "version": "0.13.6",
+      "license": "MIT/Apache-2.0",
+      "licenseFiles": [
+        "native-notices/xmlparser-0.13.6/LICENSE-APACHE",
+        "native-notices/xmlparser-0.13.6/LICENSE-MIT"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/xmlparser/xmlparser-0.13.6.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 66fee0b777b0f5ac1c69bb06d361268faafa61cd4682ae064a171c16c433e9e4"
+    },
+    {
+      "name": "Rust crate xmlwriter",
+      "version": "0.1.0",
+      "license": "MIT",
+      "licenseFiles": [
+        "native-notices/xmlwriter-0.1.0/LICENSE"
+      ],
+      "sourceUrls": [
+        "https://static.crates.io/crates/xmlwriter/xmlwriter-0.1.0.crate"
+      ],
+      "notes": "Exact version observed in distributed resvg native binary; registry source archive SHA256 ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
+    },
+    {
+      "name": "resvg / usvg / parser / tree / text layout",
+      "version": "resvg fork revision 3495d870",
+      "license": "MPL-2.0",
+      "licenseFiles": [
+        "licenses/resvg-fork-MPL-2.0.txt"
+      ],
+      "sourceUrls": [
+        "https://github.com/zimond/resvg/tree/3495d870"
+      ],
+      "notes": "Pinned native rendering engine source, Copyright Yevhenii Reizner and contributors; original Cargo manifests identify component authors."
+    },
+    {
+      "name": "mimalloc native allocator",
+      "version": "selected by resvg-js 2.6.2 manifest",
+      "license": "MIT",
+      "licenseFiles": [
+        "licenses/mimalloc-MIT.txt"
+      ],
+      "sourceUrls": [
+        "https://github.com/microsoft/mimalloc"
+      ],
+      "notes": "Complete current official allocator licence; exact resolved version not available from the upstream npm prebuilt manifest."
+    },
+    {
+      "name": "WOFF2 decoder fork",
+      "version": "0.3.0 fork referenced by resvg-js 2.6.2",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "licenses/woff2-rs-Apache-2.0.txt"
+      ],
+      "sourceUrls": [
+        "https://github.com/yisibl/woff2-rs/tree/fix-total-compressed-size"
+      ],
+      "notes": "Upstream Cargo authors Brian Hanechak and Emily Crandall Fleischman; selected fork branch recorded by original resvg-js Cargo.toml."
+    }
+  ]
+}

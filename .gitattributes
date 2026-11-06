@@ -1,0 +1,3 @@
+# Preserve upstream license/source excerpts byte-for-byte, including line endings.
+third_party/** -text -whitespace
+vendor/mpe/LICENSE.md -whitespace

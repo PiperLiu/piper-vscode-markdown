@@ -1,0 +1,512 @@
+import {
+  Notebook,
+  NotebookConfig,
+  PreviewMode,
+  PreviewTheme,
+  loadConfigsInDirectory,
+} from 'crossnote';
+import * as vscode from 'vscode';
+import {
+  MarkdownPreviewEnhancedConfig,
+  PreviewColorScheme,
+  getMPEConfig,
+  getUserMPEConfig,
+  HOST_ONLY_CONFIG_KEYS,
+} from './config';
+import {
+  OWNED_EDITOR_ASSOCIATIONS_KEY,
+  computeEditorAssociations,
+} from './editor-associations';
+import FileWatcher from './file-watcher';
+import { getAllPreviewProviders } from './preview-provider';
+import {
+  getUserScopeGlobalConfigPath,
+  getWorkspaceFolderUri,
+  globalConfigPath,
+  isVSCodeWebExtension,
+  notebookIndexingRefusalReason,
+} from './utils';
+import { wrapVSCodeFSAsApi } from './vscode-fs';
+
+class NotebooksManager {
+  private notebooks: Notebook[] = [];
+  public systemColorScheme: 'light' | 'dark' = 'light';
+  private fileWatcher: FileWatcher;
+  private currentMPEConfig: MarkdownPreviewEnhancedConfig =
+    MarkdownPreviewEnhancedConfig.getCurrentConfig();
+
+  private failedNotebookPaths: Set<string> = new Set();
+
+  /**
+   * Notebook roots that were already reported to the user as refused
+   * for note indexing (see `warnIfNotebookRootRefused`), so the
+   * warning shows once per root per session instead of once per
+   * `getNotebook` call.
+   */
+  private refusedRootWarnedPaths: Set<string> = new Set();
+
+  constructor(private context: vscode.ExtensionContext) {
+    this.fileWatcher = new FileWatcher(this.context, this);
+  }
+
+  public async getNotebook(uri: vscode.Uri): Promise<Notebook> {
+    const workspaceFolderUri = getWorkspaceFolderUri(uri);
+    this.warnIfNotebookRootRefused(workspaceFolderUri);
+
+    // Check if workspaceUri already exists in this.notebooks
+    for (let i = 0; i < this.notebooks.length; i++) {
+      if (
+        this.notebooks[i].notebookPath.toString() ===
+        workspaceFolderUri.toString()
+      ) {
+        this.applyPreviewScripts(this.notebooks[i]);
+        return this.notebooks[i];
+      }
+    }
+    // If not, create a new Notebook instance and push it to this.notebooks
+    const notebookPathStr = workspaceFolderUri.toString();
+    if (this.failedNotebookPaths.has(notebookPathStr)) {
+      throw new Error(
+        `Notebook initialization previously failed for: ${notebookPathStr}`,
+      );
+    }
+
+    let notebook: Notebook;
+    try {
+      notebook = await Notebook.init({
+        notebookPath: notebookPathStr,
+        fs: wrapVSCodeFSAsApi(
+          workspaceFolderUri.scheme,
+          workspaceFolderUri.authority,
+        ),
+        config: {},
+      });
+    } catch (error) {
+      this.failedNotebookPaths.add(notebookPathStr);
+      throw error;
+    }
+    this.notebooks.push(notebook);
+    this.applyPreviewScripts(notebook);
+    notebook.updateConfig(await this.loadNotebookConfig(uri));
+    return notebook;
+  }
+
+  /**
+   * A notebook root the index refuses to walk — a filesystem root
+   * (`/`, a Windows drive root, or dot-path spellings like `/.` — the
+   * untitled-document fallback) or the user's home directory (the
+   * dirname fallback for a markdown file opened directly from `~`) —
+   * would recursively stat/read files far beyond any workspace when the
+   * wikilink/backlink/graph index is built (#2376).  crossnote refuses
+   * to walk such a root; this surfaces that to the user once per root
+   * so the empty backlinks/graph aren't a mystery.
+   *
+   * Filesystem roots are only warned about when the root is an actual
+   * workspace folder, i.e. the user deliberately opened a drive root as
+   * their workspace. When no folder is open, `getWorkspaceFolderUri`
+   * falls back to the file's own directory — a drive-root parent is
+   * just an artifact of where the standalone file lives, and nagging
+   * about it on every markdown file activation spams notifications for
+   * people who never asked for note indexing (#2413). Indexing is still
+   * refused either way; only the notification is skipped.
+   *
+   * The home directory is different: it is never an artifact of a
+   * common file location (a loose markdown file directly in `~` is
+   * rare), and the walk it would trigger is exactly the #2376
+   * filesystem scan, so the warning fires for it in both cases — once
+   * per root per session.
+   */
+  private warnIfNotebookRootRefused(workspaceFolderUri: vscode.Uri) {
+    const reason = notebookIndexingRefusalReason(workspaceFolderUri.fsPath);
+    if (!reason) {
+      return;
+    }
+    if (reason === 'filesystem-root') {
+      const isRealWorkspaceFolder = (
+        vscode.workspace.workspaceFolders ?? []
+      ).some(
+        (folder) => folder.uri.toString() === workspaceFolderUri.toString(),
+      );
+      if (!isRealWorkspaceFolder) {
+        return;
+      }
+    }
+    const key = workspaceFolderUri.toString();
+    if (this.refusedRootWarnedPaths.has(key)) {
+      return;
+    }
+    this.refusedRootWarnedPaths.add(key);
+    // Offer the one-click way out; opening a local folder is desktop-only.
+    const openFolderItem = isVSCodeWebExtension()
+      ? undefined
+      : vscode.l10n.t('Open Folder…');
+    const message =
+      reason === 'filesystem-root'
+        ? vscode.l10n.t(
+            'Markdown Preview Enhanced: the notebook root "{root}" is a filesystem root, so notes are not indexed (wikilinks, backlinks, tags and the graph view will find nothing). Open a specific folder as your workspace to enable note indexing.',
+            { root: workspaceFolderUri.fsPath },
+          )
+        : vscode.l10n.t(
+            'Markdown Preview Enhanced: the notebook root "{root}" is the home directory, so notes are not indexed (wikilinks, backlinks, tags and the graph view will find nothing). Open a specific folder as your workspace to enable note indexing.',
+            { root: workspaceFolderUri.fsPath },
+          );
+    void vscode.window
+      .showWarningMessage(message, ...(openFolderItem ? [openFolderItem] : []))
+      .then((selected) => {
+        if (selected === openFolderItem) {
+          void vscode.commands.executeCommand(
+            'workbench.action.files.openFolder',
+          );
+        }
+      });
+  }
+
+  public async updateNotebookConfig(
+    uri: vscode.Uri,
+    createWorkspaceConfigDirectoryIfNotExists: boolean = false,
+  ) {
+    const notebook = await this.getNotebook(uri);
+    const config = await this.loadNotebookConfig(
+      uri,
+      createWorkspaceConfigDirectoryIfNotExists,
+    );
+    notebook.updateConfig(config);
+  }
+
+  private async loadNotebookConfig(
+    uri: vscode.Uri,
+    createWorkspaceConfigDirectoryIfNotExists: boolean = false,
+  ): Promise<Partial<MarkdownPreviewEnhancedConfig>> {
+    const notebook = await this.getNotebook(uri);
+
+    // Global config
+    let globalConfig: Partial<NotebookConfig> = {};
+    if (!isVSCodeWebExtension()) {
+      try {
+        // Global config always lives on the same machine where the extension
+        // host runs, regardless of whether the workspace is on a remote host
+        // (WSL/SSH). Using notebook.fs here would inherit the workspace's
+        // authority and misroute the URI (e.g. file://wsl.localhost/C:/...),
+        // which silently drops the user's ~/.crossnote customizations.
+        const localFs = wrapVSCodeFSAsApi('file', '');
+        globalConfig = await loadConfigsInDirectory(
+          globalConfigPath,
+          localFs,
+          true,
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    // Workspace config
+    let workspaceConfig: Partial<NotebookConfig> = {};
+    const workspaceConfigPath = vscode.Uri.joinPath(
+      getWorkspaceFolderUri(uri),
+      './.crossnote',
+    );
+    if (
+      (await notebook.fs.exists(workspaceConfigPath.fsPath)) ||
+      createWorkspaceConfigDirectoryIfNotExists
+    ) {
+      try {
+        workspaceConfig = await loadConfigsInDirectory(
+          workspaceConfigPath.fsPath,
+          notebook.fs,
+          createWorkspaceConfigDirectoryIfNotExists,
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    // VSCode config
+    const vscodeMPEConfig = MarkdownPreviewEnhancedConfig.getCurrentConfig();
+    this.currentMPEConfig = vscodeMPEConfig;
+
+    // Preview theme
+    const previewTheme = this.getPreviewTheme(
+      vscodeMPEConfig.previewTheme,
+      vscodeMPEConfig.previewColorScheme,
+    );
+
+    const hostConfig = Object.fromEntries(
+      HOST_ONLY_CONFIG_KEYS.map((key) => [
+        key,
+        getUserMPEConfig(key) ?? vscodeMPEConfig[key],
+      ]),
+    );
+    return {
+      ...vscodeMPEConfig,
+      ...globalConfig,
+      ...workspaceConfig,
+      ...hostConfig,
+      // Neither a repository config nor a user script can grant execution consent.
+      enableScriptExecution:
+        getMPEConfig<boolean>('enableScriptExecution') === true,
+      globalCss:
+        (globalConfig.globalCss ?? '') + (workspaceConfig.globalCss ?? ''),
+      previewTheme,
+    };
+  }
+
+  /**
+   * Apply the host-application preview-scripts flag to a notebook.
+   *
+   * `previewScriptsEnabled` is a crossnote host flag (NOT part of
+   * `NotebookConfig`): repository-controlled files (`.crossnote/config.js`,
+   * workspace `.vscode/settings.json`) can never set it. It is only ever
+   * derived from the application-scope `enablePreviewScripts` user setting
+   * — and requires the workspace to be trusted.
+   *
+   * `trustedScriptRoots` is the same kind of flag: the directories whose
+   * `head.html` scripts crossnote may load, besides the notebook's own. The
+   * global config directory is the one that matters — its `head.html` exists
+   * to apply to every preview, but the scripts beside it live outside every
+   * workspace, so without this they can never load. It is taken from the
+   * user-scope `configPath` only, so a repository cannot extend the trust to
+   * a directory outside itself, and it is empty whenever preview scripts are
+   * off.
+   */
+  private applyPreviewScripts(notebook: Notebook) {
+    notebook.previewScriptsEnabled =
+      vscode.workspace.isTrusted &&
+      (getMPEConfig<boolean>('enablePreviewScripts') ?? false);
+    notebook.trustedScriptRoots = notebook.previewScriptsEnabled
+      ? [getUserScopeGlobalConfigPath()]
+      : [];
+  }
+
+  public setSystemColorScheme(colorScheme: 'light' | 'dark') {
+    if (this.systemColorScheme !== colorScheme) {
+      this.systemColorScheme = colorScheme;
+      if (
+        getMPEConfig<PreviewColorScheme>('previewColorScheme') ===
+        PreviewColorScheme.systemColorScheme
+      ) {
+        this.updateAllNotebooksConfig();
+      }
+    }
+  }
+
+  public async updateWorkbenchEditorAssociationsBasedOnPreviewMode() {
+    const workbenchConfig = vscode.workspace.getConfiguration('workbench');
+    const previewMode = getMPEConfig<PreviewMode>('previewMode');
+    const markdownFileExtensions = getMPEConfig<string[]>(
+      'markdownFileExtensions',
+    ) ?? ['.md'];
+    const current =
+      workbenchConfig.inspect<{ [key: string]: string }>('editorAssociations')
+        ?.globalValue ?? {};
+    const { associations, owned, changed } = computeEditorAssociations({
+      current,
+      previewsOnly: previewMode === PreviewMode.PreviewsOnly,
+      markdownFileExtensions,
+      owned: this.context.globalState.get<string[]>(
+        OWNED_EDITOR_ASSOCIATIONS_KEY,
+        [],
+      ),
+    });
+
+    if (changed) {
+      await workbenchConfig.update(
+        'editorAssociations',
+        associations,
+        vscode.ConfigurationTarget.Global,
+      );
+    }
+    await this.context.globalState.update(OWNED_EDITOR_ASSOCIATIONS_KEY, owned);
+  }
+
+  public async updateAllNotebooksConfig() {
+    const previewProviders = getAllPreviewProviders();
+    const newMPEConfig = MarkdownPreviewEnhancedConfig.getCurrentConfig();
+
+    // If previewMode changed, close all previews.
+    if (this.currentMPEConfig.previewMode !== newMPEConfig.previewMode) {
+      previewProviders.forEach((provider) => {
+        provider.closeAllPreviews(this.currentMPEConfig.previewMode);
+      });
+    }
+
+    // Update all notebooks config
+    await Promise.all(
+      this.notebooks.map(async (notebook) => {
+        this.applyPreviewScripts(notebook);
+        const config = await this.loadNotebookConfig(notebook.notebookPath);
+        notebook.updateConfig(config);
+      }),
+    );
+
+    // Refresh all previews
+    previewProviders.forEach((provider) => {
+      provider.refreshAllPreviews();
+    });
+
+    this.currentMPEConfig = newMPEConfig;
+  }
+
+  private getPreviewThemeByLightOrDark(
+    theme: PreviewTheme,
+    color: 'light' | 'dark',
+  ): PreviewTheme {
+    switch (theme) {
+      case 'atom-dark.css':
+      case 'atom-light.css': {
+        return color === 'light' ? 'atom-light.css' : 'atom-dark.css';
+      }
+      case 'github-dark.css':
+      case 'github-light.css': {
+        return color === 'light' ? 'github-light.css' : 'github-dark.css';
+      }
+      case 'one-light.css':
+      case 'one-dark.css': {
+        return color === 'light' ? 'one-light.css' : 'one-dark.css';
+      }
+      case 'solarized-light.css':
+      case 'solarized-dark.css': {
+        return color === 'light' ? 'solarized-light.css' : 'solarized-dark.css';
+      }
+      default: {
+        return theme;
+      }
+    }
+  }
+
+  public getEditorColorScheme(): 'light' | 'dark' {
+    if (
+      [
+        vscode.ColorThemeKind.Light,
+        vscode.ColorThemeKind.HighContrastLight,
+      ].find((themeKind) => {
+        return vscode.window.activeColorTheme.kind === themeKind;
+      })
+    ) {
+      return 'light';
+    } else {
+      return 'dark';
+    }
+  }
+
+  private getPreviewTheme(
+    theme: PreviewTheme,
+    colorScheme: PreviewColorScheme,
+  ): PreviewTheme {
+    if (colorScheme === PreviewColorScheme.editorColorScheme) {
+      return this.getPreviewThemeByLightOrDark(
+        theme,
+        this.getEditorColorScheme(),
+      );
+    } else if (colorScheme === PreviewColorScheme.systemColorScheme) {
+      return this.getPreviewThemeByLightOrDark(theme, this.systemColorScheme);
+    } else {
+      return theme;
+    }
+  }
+
+  public async refreshNoteRelations(_noteFilePath: string) {}
+
+  /**
+   * Build the note index for `notebook` (backlinks, tags, wikilink
+   * completion, graph) unless its root is one the index must refuse —
+   * a filesystem root or the home directory (#2376). Returns whether
+   * indexing proceeded, so callers can skip dependent work (starting
+   * the file watcher) without changing their return shape.
+   *
+   * crossnote refuses such roots engine-side (0.9.40+); skipping here
+   * too means the refusal also holds on the currently-pinned crossnote.
+   */
+  private async loadNoteIndexIfAllowed(
+    notebook: Notebook,
+    uri: vscode.Uri,
+    forceRefreshingNotes: boolean = false,
+  ): Promise<boolean> {
+    // Same resolution that created the notebook inside getNotebook.
+    if (notebookIndexingRefusalReason(getWorkspaceFolderUri(uri).fsPath)) {
+      return false;
+    }
+    if (forceRefreshingNotes) {
+      // User clicked "refresh backlinks": walk the workspace and
+      // re-tokenize only files whose on-disk mtime has advanced past
+      // the recorded value (or that we've never seen).  Same end
+      // state as `refreshNotes` on a cold cache, dramatically cheaper
+      // on a warm one because the file watcher has been keeping the
+      // indices in sync.
+      await notebook.refreshNotesIncremental({
+        dir: '.',
+        includeSubdirectories: true,
+      });
+    } else {
+      await notebook.refreshNotesIfNotLoaded({
+        dir: '.',
+        includeSubdirectories: true,
+      });
+    }
+    this.fileWatcher.startFileWatcher();
+    return true;
+  }
+
+  public async getNoteBacklinks(
+    noteUri: vscode.Uri,
+    forceRefreshingNotes: boolean = false,
+  ) {
+    const notebook = await this.getNotebook(noteUri);
+    await this.loadNoteIndexIfAllowed(notebook, noteUri, forceRefreshingNotes);
+    const backlinks = await notebook.getNoteBacklinks(noteUri.fsPath);
+    return backlinks.map((backlink) => {
+      return {
+        note: backlink.note,
+        references: backlink.references,
+        referenceHtmls: backlink.referenceHtmls,
+      };
+    });
+  }
+
+  /**
+   * Resolve the notebook for a context URI (active editor / preview),
+   * make sure its notes are loaded, and return notes that mention the
+   * given `#tag`.  Backed by crossnote's TagReferenceMap so the
+   * lookup is O(notes-using-tag), not a full workspace scan.
+   */
+  public async getNotesReferringToTag(contextUri: vscode.Uri, tag: string) {
+    const notebook = await this.getNotebook(contextUri);
+    await this.loadNoteIndexIfAllowed(notebook, contextUri);
+    return notebook.getNotesReferringToTag(tag);
+  }
+
+  /**
+   * Every `#tag` mentioned anywhere in the notebook (case-folded).
+   * Used by the editor-side autocomplete so users can pick an
+   * existing tag instead of re-typing it.
+   */
+  public async getAllTags(contextUri: vscode.Uri): Promise<string[]> {
+    const notebook = await this.getNotebook(contextUri);
+    await this.loadNoteIndexIfAllowed(notebook, contextUri);
+    return notebook.getAllTags();
+  }
+
+  /**
+   * Every Markdown file in the notebook, returned as `{ uri, relativePath }`.
+   * Sourced from the notebook's already-loaded `notes` map (which the
+   * file watcher keeps current), so we avoid the per-keystroke
+   * `vscode.workspace.findFiles('**\/*.md', …)` workspace scan that
+   * note-name autocomplete used to do.
+   *
+   * Cold call: pays for `refreshNotesIfNotLoaded` (workspace scan +
+   * full markdown-it parse for each note) on first hit, but only
+   * once.  Warm calls are O(notes) iteration over an in-memory map.
+   */
+  public async getMarkdownFiles(
+    contextUri: vscode.Uri,
+  ): Promise<Array<{ uri: vscode.Uri; relativePath: string }>> {
+    const notebook = await this.getNotebook(contextUri);
+    await this.loadNoteIndexIfAllowed(notebook, contextUri);
+    const root = vscode.Uri.parse(notebook.notebookPath.toString());
+    return Object.keys(notebook.notes).map((relativePath) => ({
+      uri: vscode.Uri.joinPath(root, relativePath),
+      relativePath,
+    }));
+  }
+}
+
+export default NotebooksManager;

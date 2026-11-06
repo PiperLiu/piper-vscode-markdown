@@ -1,0 +1,299 @@
+import * as path from 'path';
+import { PreviewMode } from 'crossnote';
+import * as os from 'os';
+import * as vscode from 'vscode';
+import * as packageJSON from '../package.json';
+import { getMPEConfig, inspectMPEConfig } from './config';
+
+/**
+ * Format pathString if it is on Windows. Convert `c:\` like string to `C:\`
+ * @param pathString
+ */
+/*
+function formatPathIfNecessary(pathString: string) {
+  if (process.platform === 'win32') {
+    pathString = pathString.replace(
+      /^([a-zA-Z])\:\\/,
+      (_, $1) => `${$1.toUpperCase()}:\\`,
+    );
+  }
+  return pathString;
+}
+*/
+
+/**
+ * Get the workspace folder uri of the given uri
+ * @param uri
+ */
+export function getWorkspaceFolderUri(uri: vscode.Uri) {
+  const workspace = vscode.workspace.getWorkspaceFolder(uri);
+  if (workspace) {
+    return workspace.uri;
+  }
+
+  const workspaces = vscode.workspace.workspaceFolders;
+  if (workspaces) {
+    for (let i = 0; i < workspaces.length; i++) {
+      const workspace = workspaces[i];
+      if (uri.fsPath.startsWith(workspace.uri.fsPath)) {
+        return workspace.uri;
+      }
+    }
+  }
+
+  // Detect cross-platform URI mismatch (e.g., Windows-style URI on a Linux
+  // remote connected via Remote SSH). The fsPath will contain a Windows drive
+  // letter that is not a valid local path, so fall back to the first workspace
+  // folder instead of producing an invalid URI.
+  if (process.platform !== 'win32' && /^[a-zA-Z]:/.test(uri.fsPath)) {
+    if (workspaces && workspaces.length > 0) {
+      return workspaces[0].uri;
+    }
+  }
+
+  // Non-file documents (e.g. unsaved `untitled:` buffers) have no meaningful
+  // directory: `dirname(fsPath)` yields the `/.` spelling of the filesystem
+  // root, which the root guard refuses to index (#2376 — clicking backlinks
+  // on an unsaved buffer used to walk the whole machine from there).
+  // Associate them with the first workspace folder instead, so backlinks,
+  // wikilink completions and the graph view work against the current
+  // workspace; with no folder open, the root guard still refuses to index.
+  if (uri.scheme !== 'file' && workspaces && workspaces.length > 0) {
+    return workspaces[0].uri;
+  }
+
+  // Return the folder of uri
+  const documentDir = vscode.Uri.file(path.dirname(uri.fsPath));
+
+  // A file opened from outside every workspace folder (e.g. `code ~/doc.md`
+  // over an existing workspace window) would take its own directory as the
+  // notebook root. When that directory is one the note index must refuse —
+  // the home directory or a filesystem root — index against the first
+  // workspace folder instead, same as untitled buffers above: the workspace
+  // is the folder the user actually opened, and its wikilinks/backlinks/
+  // graph keep working rather than being silently refused (#2444). With no
+  // folder open the refused root still applies — walking `~` or a drive
+  // root is exactly the #2376 scan. Resource loading is unaffected: the
+  // preview adds the document's own directory to the webview's
+  // localResourceRoots, so images beside such a file still render.
+  if (workspaces && workspaces.length > 0) {
+    if (notebookIndexingRefusalReason(documentDir.fsPath)) {
+      return workspaces[0].uri;
+    }
+  }
+
+  return documentDir;
+}
+
+/**
+ * Why the note index must refuse to walk a notebook root, if it must.
+ *
+ * - `'filesystem-root'`: `/`, a Windows drive root, or dot-path
+ *   spellings like `/.` — indexing would stat/read across the whole
+ *   machine (vscode-mpe#2376).
+ * - `'home-directory'`: the user's home directory. The dirname fallback
+ *   above produces it for a markdown file opened directly from `~`, and
+ *   walking `~` recursively stats/reads everything under it — on macOS
+ *   `~/Library` alone spans Mail, Messages and iCloud data (#2376
+ *   again; the runtime refusal ships in crossnote, this mirrors it
+ *   host-side).
+ *
+ * The home comparison is case-insensitive on Windows: VS Code and
+ * vscode-uri disagree on drive-letter case (`c:\` vs `C:\`), and an
+ * exact match would silently no-op.
+ */
+export function notebookIndexingRefusalReason(
+  fsPath: string,
+): 'filesystem-root' | 'home-directory' | undefined {
+  const resolved = path.resolve(fsPath);
+  if (path.parse(resolved).root === resolved) {
+    return 'filesystem-root';
+  }
+  const home = path.resolve(os.homedir());
+  const isHomeDirectory =
+    process.platform === 'win32'
+      ? resolved.toLowerCase() === home.toLowerCase()
+      : resolved === home;
+  return isHomeDirectory ? 'home-directory' : undefined;
+}
+
+function resolveGlobalConfigPath(configPath: string | undefined): string {
+  if (typeof configPath === 'string' && configPath !== '') {
+    // path.join so a leading `~` expands to platform separators: a plain
+    // string replace keeps the setting's forward slash on Windows and
+    // produces a mixed-separator path (`C:\Users\…/x`), which breaks
+    // path-equality assertions (and looks odd in logs).
+    return configPath.replace(/^~(.*)$/, (_, rest: string) =>
+      rest ? path.join(os.homedir(), rest) : os.homedir(),
+    );
+  }
+
+  if (process.platform === 'win32') {
+    return path.join(os.homedir(), './.crossnote');
+  } else {
+    if (
+      typeof process.env.XDG_CONFIG_HOME === 'string' &&
+      process.env.XDG_CONFIG_HOME !== ''
+    ) {
+      return path.resolve(process.env.XDG_CONFIG_HOME, './crossnote');
+    } else {
+      return path.resolve(os.homedir(), './.local/state/crossnote');
+    }
+  }
+}
+function getGlobalConfigPath(): string {
+  return resolveGlobalConfigPath(getMPEConfig<string>('configPath'));
+}
+export const globalConfigPath = getGlobalConfigPath();
+
+/**
+ * The global config directory as the *user's own* settings name it, ignoring
+ * any `configPath` override from the workspace or a workspace folder.
+ *
+ * `configPath` is window-scoped, so a repository's `.vscode/settings.json`
+ * can point it at any directory on disk. That is harmless while the
+ * directory only supplies CSS and templates, but it must not decide which
+ * directories may supply preview *scripts*: a repository's own scripts
+ * already load once the user opts in, and honouring its `configPath` here
+ * would let it extend that trust to directories outside itself. Hence the
+ * user-scope value only.
+ */
+export function getUserScopeGlobalConfigPath(): string {
+  return resolveGlobalConfigPath(
+    inspectMPEConfig<string>('configPath')?.globalValue,
+  );
+}
+
+/**
+ * Obsidian-style "follow link to a missing note": if `fileUri`
+ * points at a non-existent file whose extension matches the
+ * configured `markdownFileExtensions`, create an empty stub there
+ * with a sensible initial title.  Returns true if it created the
+ * file, false if the file already existed or wasn't a markdown
+ * extension we should auto-create.
+ *
+ * Used by the graph-view "click an orphan node" path and the
+ * preview "click [[NewNote]] wikilink" path — both used to fall
+ * through to a `Could not open file: …` error when the target
+ * didn't exist.  Now they create the note and let the caller open
+ * it.  The file watcher picks up the create and refreshes the
+ * notebook indices on its own, so the new node shows up as a real
+ * (non-orphan) node on the next graph render.
+ */
+export async function createMissingMarkdownNote(
+  fileUri: vscode.Uri,
+): Promise<boolean> {
+  // Bail out if it already exists.
+  try {
+    await vscode.workspace.fs.stat(fileUri);
+    return false;
+  } catch {
+    // ENOENT — fall through to create.
+  }
+
+  const markdownFileExtensions =
+    getMPEConfig<string[]>('markdownFileExtensions') ?? [];
+  const ext = path.extname(fileUri.path).toLowerCase();
+  if (!markdownFileExtensions.includes(ext)) {
+    return false;
+  }
+
+  // Stub content: a single H1 with the bare basename, matching what
+  // Obsidian does on click-to-create.  Cheap to delete if the user
+  // doesn't want it.
+  const title = path.basename(fileUri.path, ext);
+  const initialContent = `# ${title}\n\n`;
+  try {
+    await vscode.workspace.fs.writeFile(
+      fileUri,
+      new TextEncoder().encode(initialContent),
+    );
+    return true;
+  } catch (error) {
+    console.error('createMissingMarkdownNote: write failed', error);
+    return false;
+  }
+}
+
+export function isMarkdownFile(document: vscode.TextDocument) {
+  let flag =
+    (document.languageId === 'markdown' ||
+      document.languageId === 'quarto' ||
+      document.languageId === 'prompt' ||
+      document.languageId === 'instructions' ||
+      document.languageId === 'chatagent' ||
+      document.languageId === 'skill') &&
+    document.uri.scheme !== 'piper-markdown-enhanced'; // prevent processing of own documents
+
+  if (!flag) {
+    // Check file extension
+    const markdownFileExtensions =
+      getMPEConfig<string[]>('markdownFileExtensions') ?? [];
+    const fileName = document.fileName;
+    const ext = path.extname(fileName).toLowerCase();
+    flag = markdownFileExtensions.includes(ext);
+  }
+
+  return flag;
+}
+
+/**
+ * Get the top-most visible range of `editor`.
+ *
+ * Returns a fractional line number based the visible character within the line.
+ * Floor to get real line number
+ */
+export function getTopVisibleLine(
+  editor: vscode.TextEditor,
+): number | undefined {
+  if (!editor['visibleRanges'].length) {
+    return undefined;
+  }
+
+  const firstVisiblePosition = editor['visibleRanges'][0].start;
+  const lineNumber = firstVisiblePosition.line;
+  const line = editor.document.lineAt(lineNumber);
+  const progress = firstVisiblePosition.character / (line.text.length + 2);
+  return lineNumber + progress;
+}
+
+/**
+ * Get the bottom-most visible range of `editor`.
+ *
+ * Returns a fractional line number based the visible character within the line.
+ * Floor to get real line number
+ */
+export function getBottomVisibleLine(
+  editor: vscode.TextEditor,
+): number | undefined {
+  if (!editor['visibleRanges'].length) {
+    return undefined;
+  }
+
+  const firstVisiblePosition = editor['visibleRanges'][0].end;
+  const lineNumber = firstVisiblePosition.line;
+  let text = '';
+  if (lineNumber < editor.document.lineCount) {
+    text = editor.document.lineAt(lineNumber).text;
+  }
+  const progress = firstVisiblePosition.character / (text.length + 2);
+  return lineNumber + progress;
+}
+
+export { isVSCodeWebExtension } from './environment';
+
+export function isVSCodewebExtensionDevMode() {
+  return process.env.IS_VSCODE_WEB_EXTENSION_DEV_MODE === 'true';
+}
+
+export function getCrossnoteVersion() {
+  return packageJSON.dependencies['crossnote'];
+}
+
+export function getPreviewMode() {
+  return getMPEConfig<PreviewMode>('previewMode');
+}
+
+export function getEditorActiveCursorLine(editor: vscode.TextEditor) {
+  return editor.selections[0].active.line ?? 0;
+}

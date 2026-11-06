@@ -1,0 +1,218 @@
+{
+  "name": "piper-markdown-review",
+  "displayName": "Piper Markdown",
+  "description": "Enhanced Markdown preview, HTML/PDF export, TOC, diagrams, and optional WeChat rich-text publishing.",
+  "version": "0.3.0",
+  "publisher": "piperliu",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "main": "./src/main.js",
+  "extensionKind": [
+    "ui"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "piperMarkdown.preview",
+        "title": "Piper Markdown: Open Enhanced Preview",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "piperMarkdown.copy",
+        "title": "Piper Markdown: Copy for WeChat",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "piperMarkdown.previewWechat",
+        "title": "Piper Markdown: Preview WeChat Layout"
+      },
+      {
+        "command": "piperMarkdown.exportHTML",
+        "title": "Piper Markdown: Export HTML"
+      },
+      {
+        "command": "piperMarkdown.exportPDF",
+        "title": "Piper Markdown: Export PDF"
+      },
+      {
+        "command": "piperMarkdown.insertTOC",
+        "title": "Piper Markdown: Insert Table of Contents"
+      },
+      {
+        "command": "piperMarkdown.exportWechatHTML",
+        "title": "Piper Markdown: Export WeChat HTML"
+      },
+      {
+        "command": "piperMarkdown.openMPE",
+        "title": "Piper Markdown: Open Enhanced Preview (Compatibility)"
+      },
+      {
+        "command": "piperMarkdown.setToken",
+        "title": "Piper Markdown: Set Image Upload Token"
+      },
+      {
+        "command": "piperMarkdown.clearToken",
+        "title": "Piper Markdown: Clear Image Upload Token"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "piperMarkdown.preview",
+          "when": "editorLangId == markdown",
+          "group": "navigation@1"
+        },
+        {
+          "command": "piperMarkdown.copy",
+          "when": "editorLangId == markdown",
+          "group": "navigation@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "piperMarkdown.openMPE",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Piper Markdown — WeChat publishing",
+      "properties": {
+        "piperMarkdown.uploadUrl": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Multipart upload endpoint, e.g. https://images.example/api/public-images. HTTP is allowed only for loopback addresses."
+        },
+        "piperMarkdown.ttl": {
+          "type": "string",
+          "default": "24h",
+          "enum": [
+            "3h",
+            "24h"
+          ],
+          "description": "Temporary image lifetime. Confirm that WeChat has stored the images before expiry."
+        },
+        "piperMarkdown.fileField": {
+          "type": "string",
+          "default": "file",
+          "description": "Multipart file field for the image host."
+        },
+        "piperMarkdown.urlField": {
+          "type": "string",
+          "default": "url",
+          "description": "Image URL field in the upload response; dotted paths such as data.url are supported."
+        },
+        "piperMarkdown.fontSize": {
+          "type": "number",
+          "default": 16,
+          "minimum": 12,
+          "maximum": 24,
+          "description": "WeChat body font size in pixels."
+        },
+        "piperMarkdown.previewWidth": {
+          "type": "number",
+          "default": 760,
+          "minimum": 480,
+          "maximum": 1200,
+          "description": "Maximum content width of the WeChat layout preview in pixels."
+        },
+        "piperMarkdown.scrollSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Synchronize the WeChat layout preview and its source editor."
+        },
+        "piperWechat.uploadUrl": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Multipart upload endpoint, e.g. https://images.example/api/public-images. HTTP is allowed only for loopback addresses.",
+          "deprecationMessage": "Use piperMarkdown.uploadUrl; explicit legacy values remain a fallback."
+        },
+        "piperWechat.ttl": {
+          "type": "string",
+          "default": "24h",
+          "enum": [
+            "3h",
+            "24h"
+          ],
+          "description": "Temporary image lifetime. Confirm that WeChat has stored the images before expiry.",
+          "deprecationMessage": "Use piperMarkdown.ttl; explicit legacy values remain a fallback."
+        },
+        "piperWechat.fileField": {
+          "type": "string",
+          "default": "file",
+          "description": "Multipart file field for the image host.",
+          "deprecationMessage": "Use piperMarkdown.fileField; explicit legacy values remain a fallback."
+        },
+        "piperWechat.urlField": {
+          "type": "string",
+          "default": "url",
+          "description": "Image URL field in the upload response; dotted paths such as data.url are supported.",
+          "deprecationMessage": "Use piperMarkdown.urlField; explicit legacy values remain a fallback."
+        },
+        "piperWechat.fontSize": {
+          "type": "number",
+          "default": 16,
+          "minimum": 12,
+          "maximum": 24,
+          "description": "WeChat body font size in pixels.",
+          "deprecationMessage": "Use piperMarkdown.fontSize; explicit legacy values remain a fallback."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:upstream": "pnpm --dir vendor/mpe test",
+    "build:native": "node scripts/build-native.js",
+    "build": "node scripts/build.js",
+    "package": "npm run build && node scripts/package.js",
+    "check": "node --check src/main.js && node --check src/wechat-extension.js && node --check media/preview.js",
+    "sync:manifest": "node scripts/sync-manifest.js"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "2.6.2",
+    "markdown-it": "14.3.3",
+    "mathjax-full": "3.2.2",
+    "highlight.js": "11.11.1",
+    "juice": "11.0.1"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "3.6.0"
+  },
+  "keywords": [
+    "markdown",
+    "preview",
+    "pdf",
+    "mermaid",
+    "wechat"
+  ],
+  "icon": "media/icon.png",
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguage:markdown",
+    "onLanguage:quarto",
+    "onLanguage:prompt",
+    "onLanguage:instructions",
+    "onLanguage:chatagent",
+    "onLanguage:skill",
+    "onCommand:piperWechat.preview",
+    "onCommand:piperWechat.copy",
+    "onCommand:piperWechat.setToken",
+    "onCommand:piperWechat.clearToken"
+  ],
+  "l10n": "./vendor/mpe/l10n"
+}
