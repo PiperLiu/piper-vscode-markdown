@@ -3,6 +3,8 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const MarkdownIt = require('markdown-it');
+// The pinned ESM plugin supports Node 18; loading once keeps preview/copy identical.
+const cjkFriendlyPlugin = import('markdown-it-cjk-friendly').then(module => module.default);
 const {parseTOCMarker}=require('./wechat-preflight');
 const hljs = require('highlight.js');
 const juice = require('juice');
@@ -92,7 +94,7 @@ function tocPlugin(md){
 }
 async function render(markdown,{filename,root=path.dirname(filename),fontSize=16,resolveAsset,signal,preview=false}={}) {
  if(markdown.length>1_000_000)throw new Error('文章过长（上限 100 万字符）');
- const assets=[];const md=new MarkdownIt({html:false,linkify:false,typographer:false,highlight:(s,lang)=>lang&&hljs.getLanguage(lang)?hljs.highlight(s,{language:lang,ignoreIllegals:true}).value:esc(s)}).use(mathPlugin).use(tocPlugin);
+ const assets=[];const md=new MarkdownIt({html:false,linkify:false,typographer:false,highlight:(s,lang)=>lang&&hljs.getLanguage(lang)?hljs.highlight(s,{language:lang,ignoreIllegals:true}).value:esc(s)}).use(await cjkFriendlyPlugin).use(mathPlugin).use(tocPlugin);
  const tokens=md.parse(markdown,{});
  const headings=[];const hasTOC=tokens.some(t=>t.type==='piper_toc');
  for(let i=0;i<tokens.length;i++){

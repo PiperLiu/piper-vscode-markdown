@@ -4,6 +4,7 @@ const { join, dirname } = require('path');
 const { context, build } = require('esbuild');
 const { polyfillNode } = require('esbuild-plugin-polyfill-node');
 const { crossnoteSafetyPlugin } = require('./src/crossnote-build-safety.cjs');
+const cjkMarkdownPlugin = require('./src/markdown-it-cjk-build.cjs');
 
 /**
  * @type {import('esbuild').Plugin}
@@ -121,6 +122,7 @@ const nativeConfig = {
   metafile: true,
   plugins: [
     crossnoteSafetyPlugin,
+    cjkMarkdownPlugin,
     externalTikzPlugin,
     safeLessPlugin,
     xhrSyncWorkerExternalPlugin,
@@ -154,6 +156,7 @@ const serveCliConfig = {
   metafile: true,
   plugins: [
     crossnoteSafetyPlugin,
+    cjkMarkdownPlugin,
     externalTikzPlugin,
     safeLessPlugin,
     xhrSyncWorkerExternalPlugin,
@@ -199,6 +202,7 @@ const webConfig = {
   external: ['vscode', 'node-tikzjax', 'stream/promises', 'stream', 'sharp'],
   plugins: [
     crossnoteSafetyPlugin,
+    cjkMarkdownPlugin,
     polyfillNode({
       polyfills: {
         fs: true,

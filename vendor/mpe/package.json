@@ -1023,7 +1023,8 @@
     "@types/vfile": "^3.0.2",
     "async-mutex": "^0.4.0",
     "crossnote": "0.9.42",
-    "crypto-js": "^4.2.0"
+    "crypto-js": "^4.2.0",
+    "markdown-it-cjk-friendly": "2.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^9",

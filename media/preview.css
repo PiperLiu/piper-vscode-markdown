@@ -5,3 +5,5 @@
 body.vscode-dark:not(.wechat) #content img.math-image,body.vscode-high-contrast:not(.wechat) #content img.math-image{filter:invert(1) brightness(.86)}
 
 #compatibility{padding:12px 22px;border-bottom:1px solid var(--vscode-panel-border,#555);background:var(--vscode-inputValidation-warningBackground,#493c21);color:var(--vscode-foreground,#eee);line-height:1.7}
+
+.option-row{display:flex;align-items:center;gap:10px;padding:9px 10px;cursor:pointer;line-height:1.45}.option-row:hover{background:var(--vscode-toolbar-hoverBackground,#333)}.option-row input{accent-color:#16856e;margin:0}.option-row small{opacity:.7;font-size:11px}

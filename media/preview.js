@@ -3,9 +3,10 @@
  const api=acquireVsCodeApi(),$=id=>document.getElementById(id);let state=api.getState()||{mode:'reading',outline:matchMedia('(min-width: 541px)').matches,scroll:0};let headings=[],sync=true,ignoreScrollUntil=0;
  const save=()=>api.setState(state),send=type=>api.postMessage({type});
  function mode(value){state.mode=value;document.body.classList.toggle('wechat',value==='wechat');for(const id of ['reading','wechat']){$(id).classList.toggle('active',id===value);$(id).setAttribute('aria-pressed',String(id===value));}save();notice();}
- function notice(){$('notice').textContent=state.mode==='wechat'?'公众号排版 · 本地预览，复制时才上传图片 · 请在有效期内确认微信转存':'公众号排版的阅读视图 · 双击正文定位源文 · 更多中可打开完整增强预览';}
+ function notice(){$('notice').textContent=(state.mode==='wechat'?'公众号排版 · 本地预览，复制时才上传图片 · 请在有效期内确认微信转存':'公众号排版的阅读视图 · 双击正文定位源文 · 更多中可打开完整增强预览')+(state.skipLeadingH1?' · 已开启忽略首标题':'');}
  function outline(){document.body.classList.toggle('no-outline',!state.outline);document.body.classList.toggle('show-outline',state.outline);$('outline-toggle').setAttribute('aria-expanded',String(state.outline));save();}
  for(const id of ['reading','wechat'])$(id).onclick=()=>mode(id);
+ $('skip-title').onchange=()=>api.postMessage({type:'skipTitle',value:$('skip-title').checked});
  $('outline-toggle').onclick=()=>{state.outline=!state.outline;outline();};
  for(const id of ['copy','source','export','mpe','settings'])$(id).onclick=()=>{send(id);$('more-menu').hidden=true;$('more').setAttribute('aria-expanded','false');};
  $('more').onclick=()=>{const bounds=$('more').getBoundingClientRect();$('more-menu').style.top=(bounds.bottom+6)+'px';$('more-menu').hidden=!$('more-menu').hidden;$('more').setAttribute('aria-expanded',String(!$('more-menu').hidden));};
@@ -14,7 +15,7 @@
  $('content').ondblclick=e=>{const block=e.target.closest('[data-source-line]');if(block)api.postMessage({type:'reveal',line:Number(block.dataset.sourceLine)});};
  let scrollTimer;addEventListener('scroll',()=>{clearTimeout(scrollTimer);scrollTimer=setTimeout(()=>{state.scroll=scrollY;save();const blocks=[...document.querySelectorAll('#content [data-source-line]')];const line=PiperNavigation.sourceAtOffset(blocks.map(el=>({line:Number(el.dataset.sourceLine),top:el.getBoundingClientRect().top})),130);if(line!==null&&sync&&Date.now()>ignoreScrollUntil)api.postMessage({type:'scroll',line});let current;for(const h of headings){const el=document.getElementById(h.id);if(el?.getBoundingClientRect().top<200)current=h.id;}$('headings').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.target===current));},100);},{passive:true});
  addEventListener('message',event=>{const m=event.data;if(m.type==='content'){
-  const y=scrollY||state.scroll;$('content').innerHTML=m.html;$('compatibility').textContent=m.compatibility||'';$('compatibility').hidden=!m.compatibility;$('filename').textContent=m.filename;$('stats').textContent=`${m.characters.toLocaleString()} 字符 · 约 ${Math.max(1,Math.ceil(m.characters/500))} 分钟`;headings=m.headings;sync=m.scrollSync;
+  const y=scrollY||state.scroll;state.skipLeadingH1=!!m.skipLeadingH1;$('skip-title').checked=state.skipLeadingH1;notice();$('content').innerHTML=m.html;$('compatibility').textContent=m.compatibility||'';$('compatibility').hidden=!m.compatibility;$('filename').textContent=m.filename;$('stats').textContent=`${m.characters.toLocaleString()} 字符 · 约 ${Math.max(1,Math.ceil(m.characters/500))} 分钟`;headings=m.headings;sync=m.scrollSync;
   document.documentElement.style.setProperty('--reading-width',m.width+'px');$('headings').replaceChildren();
   for(const h of headings){const b=document.createElement('button');b.textContent=h.title;b.style.paddingLeft=(8+(h.level-1)*10)+'px';b.dataset.target=h.id;b.onclick=()=>{ignoreScrollUntil=Date.now()+500;document.getElementById(h.id)?.scrollIntoView({block:'start'});api.postMessage({type:'reveal',line:h.line});};$('headings').append(b);}
   if(!headings.length)$('headings').textContent='添加标题后在此导航';$('error').hidden=true;requestAnimationFrame(()=>scrollTo(0,y));

@@ -208,7 +208,6 @@ The enhanced preview is a modified source fork of [Markdown Preview Enhanced 0.8
 | charenc@0.0.2 | BSD-3-Clause | [License text](third_party/licenses/charenc_0.0.2.txt) · [Source](https://github.com/pvorb/node-charenc) |
 | cheerio-select@2.1.0 | BSD-2-Clause | [License text](third_party/licenses/cheerio-select_2.1.0.txt) · [Source](https://github.com/cheeriojs/cheerio-select) |
 | cheerio@1.0.0 | MIT | [License text](third_party/licenses/cheerio_1.0.0.txt) · [Source](https://github.com/cheeriojs/cheerio) |
-| cheerio@1.2.0 | MIT | [License text](third_party/licenses/cheerio_1.2.0.txt) · [Source](https://github.com/cheeriojs/cheerio) |
 | chevrotain@11.1.2 | Apache-2.0 | [License text](third_party/licenses/chevrotain_11.1.2.txt) · [Source](https://github.com/Chevrotain/chevrotain) |
 | chokidar@3.6.0 | MIT | [License text](third_party/licenses/chokidar_3.6.0.txt) · [Source](https://github.com/paulmillr/chokidar) |
 | chrome-paths@1.0.1 | ISC | [License text](third_party/licenses/chrome-paths_1.0.1.txt) · [Source](shinnn/chrome-paths) |
@@ -325,7 +324,6 @@ The enhanced preview is a modified source fork of [Markdown Preview Enhanced 0.8
 | entities@2.2.0 | BSD-2-Clause | [License text](third_party/licenses/entities_2.2.0.txt) · [Source](https://github.com/fb55/entities) |
 | entities@4.5.0 | BSD-2-Clause | [License text](third_party/licenses/entities_4.5.0.txt) · [Source](https://github.com/fb55/entities) |
 | entities@6.0.1 | BSD-2-Clause | [License text](third_party/licenses/entities_6.0.1.txt) · [Source](https://github.com/fb55/entities) |
-| entities@7.0.1 | BSD-2-Clause | [License text](third_party/licenses/entities_7.0.1.txt) · [Source](https://github.com/fb55/entities) |
 | errno@0.1.8 | MIT | [Source](https://github.com/rvagg/node-errno) |
 | es-define-property@1.0.1 | MIT | [License text](third_party/licenses/es-define-property_1.0.1.txt) · [Source](https://github.com/ljharb/es-define-property) |
 | es-errors@1.3.0 | MIT | [License text](third_party/licenses/es-errors_1.3.0.txt) · [Source](https://github.com/ljharb/es-errors) |
@@ -368,6 +366,8 @@ The enhanced preview is a modified source fork of [Markdown Preview Enhanced 0.8
 | gcp-metadata@8.1.2 | Apache-2.0 | [License text](third_party/licenses/gcp-metadata_8.1.2.txt) · [Source](https://github.com/googleapis/google-cloud-node-core) |
 | generic-names@4.0.0 | MIT | [License text](third_party/licenses/generic-names_4.0.0.txt) · [Source](https://github.com/css-modules/generic-names) |
 | get-caller-file@2.0.5 | ISC | [License text](third_party/licenses/get-caller-file_2.0.5.txt) · [Source](https://github.com/stefanpenner/get-caller-file) |
+| get-east-asian-width@1.6.0 | MIT | [License text](third_party/licenses/get-east-asian-width_1.6.0.txt) · [Source](sindresorhus/get-east-asian-width) |
+| get-east-asian-width@1.7.0 | MIT | [License text](third_party/licenses/get-east-asian-width_1.7.0.txt) · [Source](sindresorhus/get-east-asian-width) |
 | get-intrinsic@1.3.0 | MIT | [License text](third_party/licenses/get-intrinsic_1.3.0.txt) · [Source](https://github.com/ljharb/get-intrinsic) |
 | get-proto@1.0.1 | MIT | [License text](third_party/licenses/get-proto_1.0.1.txt) · [Source](https://github.com/ljharb/get-proto) |
 | get-stream@5.2.0 | MIT | [License text](third_party/licenses/get-stream_5.2.0.txt) · [Source](sindresorhus/get-stream) |
@@ -389,7 +389,6 @@ The enhanced preview is a modified source fork of [Markdown Preview Enhanced 0.8
 | html-escaper@3.0.3 | MIT | [License text](third_party/licenses/html-escaper_3.0.3.txt) · [Source](https://github.com/WebReflection/html-escaper) |
 | html-react-parser@4.2.10 | MIT | [License text](third_party/licenses/html-react-parser_4.2.10.txt) · [Source](https://github.com/remarkablemark/html-react-parser) |
 | html-to-image@1.11.13 | MIT | [License text](third_party/licenses/html-to-image_1.11.13.txt) · [Source](https://github.com/bubkoo/html-to-image) |
-| htmlparser2@10.1.0 | MIT | [License text](third_party/licenses/htmlparser2_10.1.0.txt) · [Source](https://github.com/fb55/htmlparser2) |
 | htmlparser2@5.0.1 | MIT | [License text](third_party/licenses/htmlparser2_5.0.1.txt) · [Source](https://github.com/fb55/htmlparser2) |
 | htmlparser2@9.0.0 | MIT | [License text](third_party/licenses/htmlparser2_9.0.0.txt) · [Source](https://github.com/fb55/htmlparser2) |
 | htmlparser2@9.1.0 | MIT | [License text](third_party/licenses/htmlparser2_9.1.0.txt) · [Source](https://github.com/fb55/htmlparser2) |
@@ -454,6 +453,7 @@ The enhanced preview is a modified source fork of [Markdown Preview Enhanced 0.8
 | make-dir@2.1.0 | MIT | [License text](third_party/licenses/make-dir_2.1.0.txt) · [Source](sindresorhus/make-dir) |
 | markdown_yo@0.0.5 | MIT | [Source](https://github.com/shd101wyy/markdown_yo) |
 | markdown-it-abbr@1.0.4 | MIT | [License text](third_party/licenses/markdown-it-abbr_1.0.4.txt) · [Source](https://github.com/markdown-it/markdown-it-abbr) |
+| markdown-it-cjk-friendly@2.0.3 | MIT | [License text](third_party/licenses/markdown-it-cjk-friendly_2.0.3.txt) · [Source](https://github.com/tats-u/markdown-cjk-friendly) |
 | markdown-it-deflist@2.1.0 | MIT | [License text](third_party/licenses/markdown-it-deflist_2.1.0.txt) · [Source](markdown-it/markdown-it-deflist) |
 | markdown-it-emoji@2.0.2 | MIT | [License text](third_party/licenses/markdown-it-emoji_2.0.2.txt) · [Source](markdown-it/markdown-it-emoji) |
 | markdown-it-footnote@3.0.3 | MIT | [License text](third_party/licenses/markdown-it-footnote_3.0.3.txt) · [Source](markdown-it/markdown-it-footnote) |
@@ -659,7 +659,6 @@ The enhanced preview is a modified source fork of [Markdown Preview Enhanced 0.8
 | uc.micro@2.1.0 | MIT | [License text](third_party/licenses/uc.micro_2.1.0.txt) · [Source](markdown-it/uc.micro) |
 | undici-types@7.24.6 | MIT | [License text](third_party/licenses/undici-types_7.24.6.txt) · [Source](https://github.com/nodejs/undici) |
 | undici@6.29.1 | MIT | [License text](third_party/licenses/undici_6.29.1.txt) · [Source](https://github.com/nodejs/undici) |
-| undici@7.30.2 | MIT | [License text](third_party/licenses/undici_7.30.2.txt) · [Source](https://github.com/nodejs/undici) |
 | unescape@1.0.1 | MIT | [License text](third_party/licenses/unescape_1.0.1.txt) · [Source](jonschlinkert/unescape) |
 | unist-util-stringify-position@4.0.0 | MIT | [License text](third_party/licenses/unist-util-stringify-position_4.0.0.txt) · [Source](syntax-tree/unist-util-stringify-position) |
 | universalify@0.1.2 | MIT | [License text](third_party/licenses/universalify_0.1.2.txt) · [Source](https://github.com/RyanZim/universalify) |

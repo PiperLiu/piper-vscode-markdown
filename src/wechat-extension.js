@@ -3,7 +3,8 @@ const vscode=require('vscode');
 const path=require('node:path');
 const crypto=require('node:crypto');
 const {render,safeURL}=require('./render');
-const {upload}=require('./upload');
+const {upload,needsCredential,credentialScope}=require('./upload');
+const {prepareWechatMarkdown}=require('./wechat-markdown');
 const {writeClipboard}=require('./clipboard');
 const {readConfig}=require('./config');
 const {assertSeparateDestination}=require('./export-path');
@@ -12,8 +13,8 @@ const {inspectWechatCompatibility,compatibilityMessage,assertWechatCompatible}=r
 function activate(context,integrations={}){
  const previews=new Map();let copying=false;
  const cfg=uri=>readConfig(vscode.workspace,uri);
- const key=c=>'upload:'+crypto.createHash('sha256').update(safeURL(c.uploadUrl).href).digest('hex');
- const report=e=>vscode.window.showErrorMessage(e.name==='AbortError'?'已取消；已上传的临时图片会自动过期。':e.message);
+ const key=c=>'upload:'+crypto.createHash('sha256').update(credentialScope(c)).digest('hex');
+ const report=e=>vscode.window.showErrorMessage(e.name==='AbortError'?'已取消，剪贴板未修改；已上传图片的保留与清理由图床设置决定。':e.message);
  const guarded=fn=>async(...args)=>{try{return await fn(...args);}catch(e){report(e);}};
  function check(doc){if(!vscode.workspace.isTrusted)throw new Error('请先信任此工作区');if(!doc||doc.languageId!=='markdown'||doc.uri.scheme!=='file')throw new Error('请先打开本地 Markdown 文件');return doc;}
  async function active(){
@@ -27,9 +28,10 @@ function activate(context,integrations={}){
   if(process.platform!=='darwin'||process.arch!=='arm64')throw new Error('此安装包的富文本复制支持 macOS Apple Silicon');
   copying=true;for(const p of previews.values())p.panel.webview.postMessage({type:'busy',value:true});
   try{
-   const markdown=selection&&!selection.isEmpty?doc.getText(selection):doc.getText(),c=cfg(doc.uri);
+   const c=cfg(doc.uri),prepared=prepareWechatMarkdown(selection&&!selection.isEmpty?doc.getText(selection):doc.getText(),c.wechatSkipLeadingH1),markdown=prepared.markdown;
+   if(prepared.omittedTitle&&!markdown.trim())throw new Error('忽略标题后没有可复制的正文；剪贴板未修改。');
    assertWechatCompatible(markdown);
-   const token=c.uploadUrl?await context.secrets.get(key(c)):undefined;
+   const token=c.uploadUrl&&needsCredential(c)?await context.secrets.get(key(c)):undefined;
    const result=await vscode.window.withProgress({location:vscode.ProgressLocation.Notification,title:'准备公众号内容',cancellable:true},async(progress,cancellation)=>{
     const controller=new AbortController(),sub=cancellation.onCancellationRequested(()=>controller.abort());if(cancellation.isCancellationRequested)controller.abort();let count=0;
     try{const output=await render(markdown,{...options(doc),signal:controller.signal,resolveAsset:async asset=>{
@@ -38,7 +40,8 @@ function activate(context,integrations={}){
     }});controller.signal.throwIfAborted();return output;}finally{sub.dispose();}
    });
    await writeClipboard(context.asAbsolutePath('bin/clipboard'),result);
-   vscode.window.showInformationMessage(`已复制${selection&&!selection.isEmpty?'选区':'全文'}。${result.uniqueAssets} 张图片/公式已上传；请在 ${c.ttl} 内粘贴、保存并重新打开微信草稿检查图片。`);
+   const retention=(!c.imageHostProvider||c.imageHostProvider==='piper')?`请在 ${c.ttl} 内粘贴、保存并重新打开微信草稿检查图片。`:'请保存并重新打开微信草稿检查图片；存储期限由图床设置决定。';
+   vscode.window.showInformationMessage(`已复制${selection&&!selection.isEmpty?'选区':'全文'}。${prepared.omittedTitle?'已忽略开头的一级标题。':''}${result.uniqueAssets} 张图片/公式已上传；${retention}`);
   }finally{copying=false;for(const p of previews.values())p.panel.webview.postMessage({type:'busy',value:false});}
  }
  async function enhanced(doc){
@@ -48,7 +51,7 @@ function activate(context,integrations={}){
  }
  async function exportDocument(doc){
   doc=doc||await active();check(doc);
-  const markdown=doc.getText();assertWechatCompatible(markdown);
+  const prepared=prepareWechatMarkdown(doc.getText(),cfg(doc.uri).wechatSkipLeadingH1),markdown=prepared.markdown;if(prepared.omittedTitle&&!markdown.trim())throw new Error('忽略标题后没有可导出的正文。');assertWechatCompatible(markdown);
   const result=await render(markdown,options(doc));
   const uri=await vscode.window.showSaveDialog({defaultUri:vscode.Uri.file(doc.uri.fsPath.replace(/\.[^.]+$/, '')+'.wechat.html'),filters:{HTML:['html']},saveLabel:'导出公众号 HTML'});
   if(uri){if(uri.scheme!=='file')throw new Error('Choose a local export destination.');await assertSeparateDestination(doc.uri.fsPath,uri.fsPath);await vscode.workspace.fs.writeFile(uri,Buffer.from(exportHTML(result,path.basename(doc.uri.fsPath))));}
@@ -66,8 +69,8 @@ function activate(context,integrations={}){
   async function refresh(){
    const doc=state.doc;
    const generation=++state.generation;state.controller?.abort();state.controller=new AbortController();
-   try{const c=cfg(doc.uri),result=await render(doc.getText(),{...options(doc),preview:true,signal:state.controller.signal});if(state.disposed||generation!==state.generation||state.controller.signal.aborted)return;
-    await panel.webview.postMessage({type:'content',html:result.html,headings:result.headings,characters:result.characters,filename:path.basename(doc.uri.fsPath),width:c.previewWidth,scrollSync:c.scrollSync,compatibility:compatibilityMessage(inspectWechatCompatibility(doc.getText()))});
+   try{const c=cfg(doc.uri),prepared=prepareWechatMarkdown(doc.getText(),c.wechatSkipLeadingH1),result=await render(prepared.markdown,{...options(doc),preview:true,signal:state.controller.signal});if(state.disposed||generation!==state.generation||state.controller.signal.aborted)return;
+    await panel.webview.postMessage({type:'content',html:result.html,headings:result.headings,characters:result.characters,filename:path.basename(doc.uri.fsPath),width:c.previewWidth,scrollSync:c.scrollSync,skipLeadingH1:c.wechatSkipLeadingH1,omittedTitle:prepared.omittedTitle,compatibility:compatibilityMessage(inspectWechatCompatibility(prepared.markdown))});
    }catch(e){if(!state.disposed&&generation===state.generation&&e.name!=='AbortError')panel.webview.postMessage({type:'error',message:e.message});}
   }
   state.schedule=()=>{clearTimeout(state.timer);state.controller?.abort();state.timer=setTimeout(refresh,220);};
@@ -77,6 +80,7 @@ function activate(context,integrations={}){
    switch(m.type){
     case 'ready':return refresh();
     case 'copy':return copy(doc);
+    case 'skipTitle':{if(typeof m.value!=='boolean')return;const configuration=vscode.workspace.getConfiguration('piperMarkdown',doc.uri),current=configuration.inspect('wechatSkipLeadingH1');const target=current?.workspaceFolderValue!==undefined?vscode.ConfigurationTarget.WorkspaceFolder:current?.workspaceValue!==undefined?vscode.ConfigurationTarget.Workspace:vscode.ConfigurationTarget.Global;try{await configuration.update('wechatSkipLeadingH1',m.value,target);}finally{state.schedule();}return;}
     case 'source':return vscode.window.showTextDocument(doc,{viewColumn:vscode.ViewColumn.One});
     case 'export':return exportDocument(doc);
     case 'mpe':return enhanced(doc);
@@ -98,7 +102,7 @@ function activate(context,integrations={}){
   preview:()=>preview(),
   copy:async()=>{const doc=await active();const editor=vscode.window.activeTextEditor;return copy(doc,editor?.document===doc?editor.selection:undefined);},
   exportHTML:()=>exportDocument(),
-  setToken:async()=>{const c=cfg();if(!c.uploadUrl)throw new Error('先在设置中填写 piperMarkdown.uploadUrl');const secretKey=key(c);const token=await vscode.window.showInputBox({title:`图床上传 Token · ${safeURL(c.uploadUrl).host}`,password:true,ignoreFocusOut:true,prompt:'保存在 VS Code SecretStorage，不写入 settings.json'});if(token){await context.secrets.store(secretKey,token);vscode.window.showInformationMessage('图床 Token 已保存');}},
+  setToken:async()=>{const c=cfg();if(!c.uploadUrl)throw new Error('先在设置中填写 piperMarkdown.uploadUrl');if(!needsCredential(c)){vscode.window.showInformationMessage('当前图床无需上传凭据。');return;}const secretKey=key(c);const token=await vscode.window.showInputBox({title:`图床上传凭据 / Upload credential · ${safeURL(c.uploadUrl).host}`,password:true,ignoreFocusOut:true,prompt:'保存在 VS Code SecretStorage，不写入 settings.json'});if(token){await context.secrets.store(secretKey,token);vscode.window.showInformationMessage('图床 Token 已保存');}},
   clearToken:async()=>{const c=cfg();if(!c.uploadUrl)throw new Error('先配置当前图床地址');await context.secrets.delete(key(c));vscode.window.showInformationMessage('当前图床 Token 已删除');}
  };
  for(const name of ['copy','setToken','clearToken'])register('piperMarkdown.'+name,actions[name]);

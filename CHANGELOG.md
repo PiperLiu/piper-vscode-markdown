@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1
+
+- Add an optional leading-H1 omission setting and a checkbox in the WeChat preview. WeChat preview, copy, and HTML export agree; enhanced preview/export and source files remain unchanged.
+- Add configurable generic multipart image hosts and Qiniu direct uploads, with per-provider credentials in SecretStorage and user-only connection settings. Keep the original Piper protocol and saved tokens compatible.
+- Apply CJK-friendly emphasis rules to both enhanced and WeChat rendering, including Chinese punctuation adjacent to bold/italic markers without inserted spaces.
+- Provide English and Simplified Chinese Marketplace documentation, protocol examples, and clear third-party hosting limits.
+- Pin compatible HTML-processing dependencies for extension-host runtime compatibility.
+
 ## 0.3.0
 
 - Embed a source fork of Markdown Preview Enhanced 0.8.40 and crossnote 0.9.42, with independent namespaces and compatibility for existing explicit MPE settings.

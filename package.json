@@ -1,8 +1,8 @@
 {
   "name": "piper-markdown-review",
   "displayName": "Piper Markdown",
-  "description": "Enhanced Markdown preview, HTML/PDF export, TOC, diagrams, and optional WeChat rich-text publishing.",
-  "version": "0.3.0",
+  "description": "Enhanced Markdown preview, HTML/PDF, TOC and WeChat publishing. Markdown 增强预览、导出、目录与公众号排版。",
+  "version": "0.3.1",
   "publisher": "piperliu",
   "license": "MIT",
   "engines": {
@@ -250,17 +250,19 @@
               "3h",
               "24h"
             ],
-            "description": "Temporary image lifetime. Confirm that WeChat has stored the images before expiry."
+            "description": "Piper only: requested temporary-image lifetime. Other providers use their own lifecycle rules. 仅 Piper：临时图片有效期；其他图床由各自存储策略控制。"
           },
           "piperMarkdown.fileField": {
             "type": "string",
             "default": "file",
-            "description": "Multipart file field for the image host."
+            "description": "Piper/Generic multipart file field; Qiniu always uses file. Piper/通用图床文件字段；七牛固定使用 file。",
+            "scope": "machine"
           },
           "piperMarkdown.urlField": {
             "type": "string",
             "default": "url",
-            "description": "Image URL field in the upload response; dotted paths such as data.url are supported."
+            "description": "Piper/Generic response URL path, such as data.url; Qiniu uses key. Piper/通用图床响应 URL 字段，七牛使用 key。",
+            "scope": "machine"
           },
           "piperMarkdown.fontSize": {
             "type": "number",
@@ -295,20 +297,22 @@
               "3h",
               "24h"
             ],
-            "description": "Temporary image lifetime. Confirm that WeChat has stored the images before expiry.",
+            "description": "Piper only: requested temporary-image lifetime. Other providers use their own lifecycle rules. 仅 Piper：临时图片有效期；其他图床由各自存储策略控制。",
             "deprecationMessage": "Use piperMarkdown.ttl; explicit legacy values remain a fallback."
           },
           "piperWechat.fileField": {
             "type": "string",
             "default": "file",
-            "description": "Multipart file field for the image host.",
-            "deprecationMessage": "Use piperMarkdown.fileField; explicit legacy values remain a fallback."
+            "description": "Piper/Generic multipart file field; Qiniu always uses file. Piper/通用图床文件字段；七牛固定使用 file。",
+            "deprecationMessage": "Use piperMarkdown.fileField; explicit legacy values remain a fallback.",
+            "scope": "machine"
           },
           "piperWechat.urlField": {
             "type": "string",
             "default": "url",
-            "description": "Image URL field in the upload response; dotted paths such as data.url are supported.",
-            "deprecationMessage": "Use piperMarkdown.urlField; explicit legacy values remain a fallback."
+            "description": "Piper/Generic response URL path, such as data.url; Qiniu uses key. Piper/通用图床响应 URL 字段，七牛使用 key。",
+            "deprecationMessage": "Use piperMarkdown.urlField; explicit legacy values remain a fallback.",
+            "scope": "machine"
           },
           "piperWechat.fontSize": {
             "type": "number",
@@ -317,6 +321,86 @@
             "maximum": 24,
             "description": "WeChat body font size in pixels.",
             "deprecationMessage": "Use piperMarkdown.fontSize; explicit legacy values remain a fallback."
+          },
+          "piperMarkdown.wechatSkipLeadingH1": {
+            "type": "boolean",
+            "default": false,
+            "description": "Omit a leading H1 from WeChat layout/copy/export only; source and enhanced exports stay intact. 公众号排版、复制及导出时忽略开头的一级标题，不修改源文或增强导出。"
+          },
+          "piperMarkdown.imageHostProvider": {
+            "type": "string",
+            "default": "piper",
+            "description": "Image host protocol / 图床协议。Piper preserves the original private host API; Generic supports configurable multipart APIs; Qiniu uses an upload token.",
+            "scope": "machine",
+            "enum": [
+              "piper",
+              "generic",
+              "qiniu"
+            ],
+            "enumDescriptions": [
+              "Piper temporary image host / Piper 临时图床",
+              "Configurable multipart API / 通用 multipart 图床",
+              "Qiniu direct upload / 七牛云直传"
+            ]
+          },
+          "piperMarkdown.uploadAuthMode": {
+            "type": "string",
+            "default": "header",
+            "description": "Generic host authentication / 通用图床鉴权方式。Credentials are stored with Set Image Upload Token, never in settings.",
+            "scope": "machine",
+            "enum": [
+              "header",
+              "form",
+              "none"
+            ]
+          },
+          "piperMarkdown.uploadHeaderName": {
+            "type": "string",
+            "default": "Authorization",
+            "description": "Generic credential header name / 通用图床凭据请求头名称。",
+            "scope": "machine"
+          },
+          "piperMarkdown.uploadHeaderPrefix": {
+            "type": "string",
+            "default": "Bearer ",
+            "description": "Prefix before the stored credential; empty for a raw API token / 凭据前缀，原始 Token 可留空。",
+            "scope": "machine"
+          },
+          "piperMarkdown.uploadTokenField": {
+            "type": "string",
+            "default": "token",
+            "description": "Generic credential form field / 通用图床凭据表单字段名。",
+            "scope": "machine"
+          },
+          "piperMarkdown.uploadHeaders": {
+            "type": "object",
+            "default": {},
+            "description": "Generic non-secret request headers. Put credentials in SecretStorage instead / 通用图床非敏感请求头，凭据请存入 SecretStorage。",
+            "scope": "machine",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "piperMarkdown.uploadFields": {
+            "type": "object",
+            "default": {},
+            "description": "Generic non-secret multipart fields / 通用图床非敏感 multipart 表单字段。",
+            "scope": "machine",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "piperMarkdown.publicBaseUrl": {
+            "type": "string",
+            "default": "",
+            "description": "Qiniu public HTTPS image base URL, e.g. https://images.example/ / 七牛云公开 HTTPS 图片域名。",
+            "scope": "machine"
+          },
+          "piperMarkdown.qiniuKeyPrefix": {
+            "type": "string",
+            "default": "",
+            "description": "Optional Qiniu object key directory prefix / 七牛云对象键目录前缀。",
+            "scope": "machine"
           }
         }
       },
@@ -1132,7 +1216,8 @@
     "markdown-it": "14.3.3",
     "mathjax-full": "3.2.2",
     "highlight.js": "11.11.1",
-    "juice": "11.0.1"
+    "juice": "11.0.1",
+    "markdown-it-cjk-friendly": "2.0.3"
   },
   "devDependencies": {
     "@vscode/vsce": "3.6.0"
@@ -1158,5 +1243,9 @@
     "onCommand:piperWechat.setToken",
     "onCommand:piperWechat.clearToken"
   ],
-  "l10n": "./vendor/mpe/l10n"
+  "l10n": "./vendor/mpe/l10n",
+  "overrides": {
+    "cheerio": "1.0.0",
+    "undici@6": "6.29.1"
+  }
 }

@@ -37,6 +37,9 @@ importers:
       crypto-js:
         specifier: ^4.2.0
         version: 4.2.0
+      markdown-it-cjk-friendly:
+        specifier: 2.0.3
+        version: 2.0.3(markdown-it@14.3.3)
     devDependencies:
       '@eslint/js':
         specifier: ^9
@@ -3658,6 +3661,16 @@ packages:
 
   markdown-it-abbr@1.0.4:
     resolution: {integrity: sha512-ZeA4Z4SaBbYysZap5iZcxKmlPL6bYA8grqhzJIHB1ikn7njnzaP8uwbtuXc4YXD5LicI4/2Xmc0VwmSiFV04gg==}
+
+  markdown-it-cjk-friendly@2.0.3:
+    resolution: {integrity: sha512-dBAhqp7GZ6he15ug2t5JSfwTw2KvZX9tt0y7Up0reR1cZOBUogSq5V859hcIGwge7hjW1SkUaWkNr++0HszyZg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@types/markdown-it': '*'
+      markdown-it: 14.3.3
+    peerDependenciesMeta:
+      '@types/markdown-it':
+        optional: true
 
   markdown-it-deflist@2.1.0:
     resolution: {integrity: sha512-3OuqoRUlSxJiuQYu0cWTLHNhhq2xtoSFqsZK8plANg91+RJQU1ziQ6lA2LzmFAEes18uPBsHZpcX6We5l76Nzg==}
@@ -9768,6 +9781,11 @@ snapshots:
       object-visit: 1.0.1
 
   markdown-it-abbr@1.0.4: {}
+
+  markdown-it-cjk-friendly@2.0.3(markdown-it@14.3.3):
+    dependencies:
+      get-east-asian-width: 1.6.0
+      markdown-it: 14.3.3
 
   markdown-it-deflist@2.1.0: {}
 

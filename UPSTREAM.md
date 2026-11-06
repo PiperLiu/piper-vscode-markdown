@@ -26,3 +26,7 @@ Piper communicates with this renderer as a separate process using a bounded TeX-
 ## License inventory
 
 `scripts/third-party-notices.js` records package license texts and source references without local filesystem paths. The inventory may include build-resolved optional components that are not included in the VSIX. Original component license files remain authoritative. Notices for fonts and web assets are retained with those assets. No upstream author is presented as endorsing this fork.
+
+## CJK emphasis
+
+Both the enhanced Markdown-it engine and Piper's WeChat renderer use [markdown-it-cjk-friendly 2.0.3](https://github.com/tats-u/markdown-cjk-friendly) under its MIT license. The plugin handles emphasis next to CJK text and punctuation without adding spaces to source content. It is applied per parser instance, preserving upstream engines outside Piper and ordinary escaped/code content.
