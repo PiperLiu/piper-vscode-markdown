@@ -14,7 +14,7 @@ test('公众号目录支持中文重复标题与MPE目录标记，不执行一�
   const markdown=`# 主标题\n\n${marker}\n\n## 中文 & 内容\n\n正文\n\n## 中文 & 内容`;
   assert.doesNotThrow(()=>assertWechatCompatible(markdown));
   const out=await render(markdown,{filename:__filename});
-  assert.match(out.html,/class="article-toc"/);assert.match(out.html,/href="#piper-heading-1"/);assert.match(out.html,/id="piper-heading-2"/);assert.match(out.html,/中文 &amp; 内容/);
+  assert.match(out.html,/class="article-toc"/);assert.doesNotMatch(out.html,/href="#/);assert.match(out.html,/中文 &amp; 内容/);
   assert.doesNotMatch(out.html,/@import|\[TOC\]/i);
  }
  const out=await render('```text\n[TOC]\n@import "[TOC]"\n```',{filename:__filename});

@@ -360,7 +360,9 @@ export async function parseEnhanced(
       useGitHubStylePipedLink: false,
       wikiLinkTargetFileExtension: '.md',
       wikiLinkTargetFileNameChangeCase: 'none',
-      protocolsWhiteList: 'file',
+      // Preserve URL identity; the publication boundary filters clickable links.
+      // Import IO remains separately constrained by inspect/guard above.
+      protocolsWhiteList: 'https://, http://, mailto:, file://',
       parserConfig: {
         onWillParseMarkdown: async (value) => value,
         onDidParseMarkdown: async (value) => value,

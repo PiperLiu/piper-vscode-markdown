@@ -2,7 +2,7 @@
   "name": "piper-markdown-review",
   "displayName": "Piper Markdown",
   "description": "Enhanced Markdown preview, HTML/PDF, TOC and WeChat publishing. Markdown 增强预览、导出、目录与公众号排版。",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "piperliu",
   "license": "MIT",
   "engines": {

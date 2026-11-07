@@ -53,7 +53,7 @@ PNG, JPEG, WebP, and GIF images are supported; GIF animation is preserved. Local
 | DOT / Graphviz | Parsed by the enhanced engine, then converted from SVG to PNG. |
 | Footnotes and task lists | Numbered endnotes and static checked/unchecked marks. |
 | Local Markdown, text, data, and image imports | Expanded within the workspace boundary; source files remain unchanged. |
-| Same-document anchors | Retained in the article. |
+| Links and TOC/footnote navigation | Only HTTPS links on exactly `mp.weixin.qq.com` remain clickable in WeChat output. Other public URLs remain readable as text; exported TOC/footnote jumps become text. Preview navigation and standard HTML/PDF are unchanged. |
 | Local links and wiki links | Visible text remains, with a warning; private local file addresses are not published. |
 
 Executable code blocks, remote imports or chart data, and publishing diagrams that require external tools or services—such as PlantUML, D2, and TikZ—are rejected with an explanation. They remain separate from the enhanced-reading tool integrations. If Chrome/Edge is unavailable, ordinary SVG can use the local rasterizer fallback, but browser-rendered diagrams need a browser. Use `piperMarkdown.enhanced.chromePath` to choose one. Unsupported output is reported before the clipboard changes rather than silently omitted.
@@ -151,7 +151,7 @@ Piper 内置 [Markdown Preview Enhanced](https://github.com/shd101wyy/vscode-mar
 | DOT / Graphviz | 由增强引擎解析，再将 SVG 转为 PNG。 |
 | 脚注和任务列表 | 转为带编号的尾注及静态已选/未选标记。 |
 | 本地 Markdown、文本、数据和图片导入 | 在工作区边界内展开，不改写源文件。 |
-| 同文锚点 | 保留在文章中。 |
+| 链接及目录、脚注导航 | 公众号输出只保留准确匹配 `mp.weixin.qq.com` 的 HTTPS 可点击链接。其他公开网址保留为文字，导出目录和脚注移除跳转；预览导航及普通 HTML/PDF 不变。 |
 | 本地链接和双链 | 保留可见文字并提示，私有本地文件地址不进入发布内容。 |
 
 可执行代码块、远程导入或图表数据，以及依赖外部工具或服务的 PlantUML、D2、TikZ 等发布图表会被明确拒绝；它们与增强阅读中的工具集成是不同流程。没有 Chrome/Edge 时，普通 SVG 可回退至本地栅格化工具，但浏览器渲染图表仍需要浏览器，可用 `piperMarkdown.enhanced.chromePath` 指定。不支持的输出会在修改剪贴板前提示，不会被静默丢弃。
@@ -199,3 +199,5 @@ npm run package
 建议使用 Node.js 22+ 打包。原生剪贴板助手需要 macOS 和 Xcode Command Line Tools。前端源码版本及构建要求见 [UPSTREAM.md](UPSTREAM.md)，验收见 [TESTING.md](TESTING.md)，发布检查见 [PUBLISHING.md](PUBLISHING.md)。
 
 Piper 自有代码采用 MIT 许可，MPE 和 crossnote 保留其 University of Illinois/NCSA 许可。其他组件遵循各自许可，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。这是独立项目，不代表上游作者背书。
+
+公众号链接兼容：复制与公众号 HTML 导出只保留 `https://mp.weixin.qq.com` 的可点击链接；其他公开网址转为可复制文字，目录和脚注保留内容但移除跳转。本地链接不暴露文件路径。预览导航及普通 HTML/PDF 导出不变。

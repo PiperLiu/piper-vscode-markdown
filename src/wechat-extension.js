@@ -109,7 +109,7 @@ function activate(context, integrations = {}) {
         return result;
       }, external);
       const retention = c.imageHostProvider === 'piper' ? t('Paste and save before the ' + c.ttl + ' image lifetime expires.', '请在图片 ' + c.ttl + ' 有效期内粘贴并保存。') : t('Image retention is managed by your host.', '图片保留期限由图床管理。');
-      const message = t('Copied for WeChat. ', '已复制到公众号。') + (prepared.omittedTitle ? t('Leading H1 omitted. ', '已忽略开头的一级标题。') : '') + (output.uniqueAssets ? output.uniqueAssets + t(' images/formulas uploaded. ', ' 张图片或公式已上传。') + retention : '') + t('Save and reopen the WeChat draft to confirm its images.', '请保存并重新打开微信草稿，确认图片已转存。');
+      const message = t('Copied for WeChat. ', '已复制到公众号。') + (output.convertedLinks ? t('Unsupported links converted to text. ', '不支持的链接已转为文字。') : '') + (prepared.omittedTitle ? t('Leading H1 omitted. ', '已忽略开头的一级标题。') : '') + (output.uniqueAssets ? output.uniqueAssets + t(' images/formulas uploaded. ', ' 张图片或公式已上传。') + retention : '') + t('Save and reopen the WeChat draft to confirm its images.', '请保存并重新打开微信草稿，确认图片已转存。');
       void vscode.window.showInformationMessage(message);
       return { ...output, omittedTitle: prepared.omittedTitle, message };
     } catch (error) { error.piperReported = true; void report(error, doc).catch(() => {}); throw error; }

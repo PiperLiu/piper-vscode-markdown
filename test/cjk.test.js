@@ -49,7 +49,7 @@ const cases=[
  ['`这是**原样。**后文`','<code>这是**原样。**后文</code>'],
  [String.raw`这是\*\*原样。\*\*后文`,'这是**原样。**后文'],
  ['这是**含 `code` 和 *强调*。**后文','这是<strong>含 <code>code</code> 和 <em>强调</em>。</strong>后文'],
- ['这是**[链接](https://example.com)。**后文','这是<strong><a href="https://example.com">链接</a>。</strong>后文'],
+ ['这是**[链接](https://mp.weixin.qq.com/s/example)。**后文','这是<strong><a href="https://mp.weixin.qq.com/s/example">链接</a>。</strong>后文'],
  ['𠮷**补充汉字。**𠮷','𠮷<strong>补充汉字。</strong>𠮷'],
 ];
 for(const [source,expected]of cases)test(`CJK parity: ${source}`,async()=>{

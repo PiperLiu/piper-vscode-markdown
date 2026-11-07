@@ -8,6 +8,7 @@ const cjkFriendlyPlugin = import('markdown-it-cjk-friendly').then(module => modu
 const {parseTOCMarker,assertWechatCompatible}=require('./wechat-preflight');
 const {publishingStyle}=require('./publishing-style');
 const {normalizeHTML}=require('./publishing-html');
+const {normalizeWechatLinks}=require('./publishing-links');
 const {rasterizeSVG,disposePublishingBrowser}=require('./publishing-browser');
 const {validateSVG}=require('./publishing-svg');
 const footnotes=require('markdown-it-footnote');
@@ -133,6 +134,8 @@ async function render(markdown,{filename,root=path.dirname(filename),fontSize=16
  for(const toc of explicitTOCs){const nodes=result.$('p').filter((_,node)=>result.$(node).text().trim()===toc.marker);if(nodes.length!==1)throw new Error('增强引擎未能保留正文目录位置');nodes.replaceWith(tocHTML(result.headings,toc.options));}
  for(const toc of result.tocMarkers)result.$(toc.element).replaceWith(tocHTML(result.headings,toc.options));
  if(wechatIncludeTOC&&!result.$('.article-toc').length&&result.headings.length)result.$.root().prepend(tocHTML(result.headings));
+ const convertedLinks=normalizeWechatLinks(result.$,{preview});
+ if(convertedLinks)result.warnings.push({kind:'wechat-links',message:'Non-WeChat links and exported TOC/footnote jumps are converted to text. Public URLs remain readable. / 非公众号链接及导出目录、脚注跳转已转为文字，公开网址仍可复制。'});
  const entries=[...unique.values()];let next=0,completed=0;const urls=[];
  if(resolveAsset)onProgress?.({phase:'upload',completed:0,total:entries.length});
  const controller=new AbortController(),combined=signal?AbortSignal.any([signal,controller.signal]):controller.signal;
@@ -158,6 +161,6 @@ async function render(markdown,{filename,root=path.dirname(filename),fontSize=16
  if(!preview){result.$('[data-source-line]').removeAttr('data-source-line');const targets=new Set(result.$('a[href^="#"]').toArray().map(a=>result.$(a).attr('href').slice(1)));result.$('h1,h2,h3,h4,h5,h6').each((_,heading)=>{const node=result.$(heading);if(!targets.has(node.attr('id')))node.removeAttr('id');});}
  onProgress?.({phase:'style',completed:0,total:1});const html=juice.inlineContent(`<section class="piper-article">${result.$.html()}</section>`,theme.css,{removeStyleTags:true});signal?.throwIfAborted();onProgress?.({phase:'style',completed:1,total:1});
  const textTree=result.$.root().clone();textTree.find('img').each((_,image)=>{const node=result.$(image);node.replaceWith(result.$('<span>').text(node.attr('alt')||'图片'));});textTree.find('br').replaceWith('\n');textTree.find('li').each((_,item)=>{const node=result.$(item),parent=node.parent();node.prepend(parent.is('ol')?String(parent.children('li').index(item)+Number(parent.attr('start')||1))+'. ':'• ');});textTree.find('th,td').append('\t');textTree.find('p,h1,h2,h3,h4,h5,h6,li,tr,pre,blockquote,section,div').append('\n');const text=textTree.text().replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
- return {html,text,assets:assets.length,uniqueAssets:unique.size,headings:result.headings,warnings:result.warnings,characters:Array.from(markdown.replace(/\s/g,'')).length};
+ return {html,text,convertedLinks,assets:assets.length,uniqueAssets:unique.size,headings:result.headings,warnings:result.warnings,characters:Array.from(markdown.replace(/\s/g,'')).length};
 }
 module.exports={render,safeURL,localImage,mathImage,rasterSVG,disposePublishingBrowser};

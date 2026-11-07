@@ -4,6 +4,10 @@
 
 ## English
 
+### 0.4.2
+
+- Fix WeChat domain validation failures: retain only exact HTTPS `mp.weixin.qq.com` hyperlinks; preserve other public URLs as text and remove exported TOC/footnote jumps. Keep image sources, preview navigation, and standard exports unchanged.
+
 ### 0.4.1
 
 - Queue and pace Piper uploads to work with resource-limited image hosts. Retry explicit HTTP 429 responses within a bounded budget while respecting Retry-After; keep every wait cancellable.
@@ -43,6 +47,10 @@
 - Publish the initial macOS Apple Silicon package.
 
 ## 中文
+
+### 0.4.2
+
+- 修复微信公众号域名校验失败：仅保留准确匹配 `mp.weixin.qq.com` 的 HTTPS 超链接，其他公开网址保留为文字，导出目录和脚注移除跳转。图片地址、预览导航及普通导出不变。
 
 ### 0.4.1
 
